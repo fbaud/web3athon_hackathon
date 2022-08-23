@@ -10,7 +10,7 @@ import '../css/poc.css';
 
 
 
-class NotificationListView extends React.Component {
+class CreditBookListView extends React.Component {
 	
 	constructor(props) {
 		super(props);
@@ -53,14 +53,14 @@ class NotificationListView extends React.Component {
 	}
 	
 	componentDidUpdate(prevProps) {
-		console.log('NotificationListView.componentDidUpdate called');
+		console.log('CreditBookListView.componentDidUpdate called');
 		
 	}
 
 	componentDidMount() {
-		console.log('NotificationListView.componentDidMount called');
+		console.log('CreditBookListView.componentDidMount called');
 
-		this.checkNavigationState().catch(err => {console.log('error in NotificationListView.checkNavigationState: ' + err);});
+		this.checkNavigationState().catch(err => {console.log('error in CreditBookListView.checkNavigationState: ' + err);});
 		
 	}
 
@@ -184,7 +184,7 @@ class NotificationListView extends React.Component {
 			this.setState({current_challenge_name, items});
 		}
 		catch(e) {
-			console.log('exception in NotificationListView.checkNavigationState: '+ e);
+			console.log('exception in CreditBookListView.checkNavigationState: '+ e);
 		}
 		finally {
 			this.checking = false;
@@ -195,7 +195,7 @@ class NotificationListView extends React.Component {
 
 	// end of life
 	componentWillUnmount() {
-		console.log('NotificationListView.componentWillUnmount called');
+		console.log('CreditBookListView.componentWillUnmount called');
 
 		// unregister to window events
 
@@ -227,7 +227,7 @@ class NotificationListView extends React.Component {
 
 
 	async onClickItem(item) {
-		console.log('NotificationListView.onClickItem pressed!');
+		console.log('CreditBookListView.onClickItem pressed!');
 
 		this.parent.current_notification = item;
 	
@@ -293,7 +293,7 @@ class NotificationListView extends React.Component {
 }
 
 // propTypes validation
-NotificationListView.propTypes = {
+CreditBookListView.propTypes = {
 	app: PropTypes.object.isRequired,
 	rootsessionuuid: PropTypes.string,
 	currentwalletuuid: PropTypes.string,
@@ -313,5 +313,5 @@ const mapDispatchToProps = (dispatch) => {
 }
 
 
-export {NotificationListView};
-export default connect(mapStateToProps, mapDispatchToProps)(NotificationListView);
+export {CreditBookListView};
+export default connect(mapStateToProps, mapDispatchToProps)(CreditBookListView);

@@ -16,72 +16,77 @@ class CreditBookScreen extends React.Component {
 		super(props);
 		
 		this.app = this.props.app;
-
-		this.getMvcMyPWA = this.app.getMvcMyPWA;
+		this.getMvcModuleObject = this.app.getMvcModuleObject;
 
 		this.state = {
-			loaded: false,
-			lineinfo: 'loading...'
+			url: ''
 		};		
 	}
 	
 	componentDidMount(prevProps) {
 		console.log('CreditBookScreen.componentDidMount called');
-		
-		this.checkNavigationState().catch(err => {console.log('error in checkNavigationState: ' + err);});
-	
-	}
 
-	async checkNavigationState() {
-		this.checking = true;
+		let app_nav_state = this.app.getNavigationState();
+		let app_nav_target = app_nav_state.target;
 
-		try {
-			let mvcmypwa = this.getMvcMyPWA();
+		if (app_nav_target && (app_nav_target.route == 'deeplink') && (app_nav_target.reached == false)) {
+			// we want to login before completing previous route
+			let params = app_nav_target.params;
 
-			let rootsessionuuid = this.props.rootsessionuuid;
-			let walletuuid = this.props.currentwalletuuid;
-	
-			let app_nav_state = this.app.getNavigationState();
-			let app_nav_target = app_nav_state.target;
+			if (params && params.url) {
+				this.setState({url: params.url});
+			}
 
-			let creditbook_list = await mvcmypwa.readCreditBooks(rootsessionuuid, walletuuid);
+			app_nav_target.reached = true;
+	   }
+	   else {
+			// direct call from browser
+			let app_start_conditions = this.app.getVariable('start_conditions');
+			let urlParams = app_start_conditions.urlParams;
 
-			console.log('');
-	
-		}
-		catch(e) {
-			console.log('exception in CreditBookScreen.checkNavigationState: '+ e);
-		}
-		finally {
-			this.checking = false;
-		}
-		this.setState({loaded: true});
-	}
-	
-	// end of life
-	componentWillUnmount() {
-		console.log('CreditBookScreen.componentWillUnmount called');
-		let app = this.app;
-		let mvcmyquote = this.getMvcMyQuoteObject();
+			let _url;
+			let _encodedurl = urlParams.get('linkurl');
+
+			if (_encodedurl) {
+				if (_encodedurl.startsWith('b64_'))
+					_url = this.app.decodebase64(_encodedurl.substring(4));
+				else if (_encodedurl.startsWith('hex_'))
+					_url = this.app.decodehex(_encodedurl.substring(4));
+
+				this.setState({url: _url});
+			}
+
+	   }
 		
 	}
 	
+	async onGotoLink() {
+		console.log('CreditBookScreen.onGotoLink pressed!');
+
+		let {url} = this.state;
+ 
+		await this.app.gotoUrl(url);
+	}
+
 	renderScreen() {
-		let {lineinfo} = this.state;
+		let {url} = this.state;
 
 		return (
 			<div className="Container">
-				<div className="Instructions">Credit Book.</div>
+				<div className="Instructions">Create Credit Book.</div>
 				<div className="Form">
 					<FormGroup controlId="url">
 					<FormLabel>Url</FormLabel>
 					<FormControl
 						autoFocus
 						type="text"
-						value={lineinfo}
+						value={url}
 						onChange={e => this.setState({url: e.target.value})}
 					/>
 					</FormGroup>
+					<Button onClick={this.onGotoLink.bind(this)} type="submit">
+						Go
+					</Button>
 				</div>
 			</div>
 		);		
@@ -106,16 +111,12 @@ class CreditBookScreen extends React.Component {
 
 // propTypes validation
 CreditBookScreen.propTypes = {
-	app: PropTypes.object.isRequired,
-	rootsessionuuid: PropTypes.string,
-	currentwalletuuid: PropTypes.string,
+	app: PropTypes.object.isRequired
 };
 
 //redux
 const mapStateToProps = (state) => {
 	return {
-		rootsessionuuid: state.session.sessionuuid,
-		currentwalletuuid: state.wallets.walletuuid,
 	};
 } 
 
