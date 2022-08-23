@@ -247,7 +247,7 @@ var CreditBookContractInterface = class {
 		return contractinstance.method_call("owner", params, callback);
 	}
 	
-	getToken(callback) {
+	getCurrencyToken(callback) {
 		var self = this;
 		var session = this.session;
 		
@@ -258,31 +258,20 @@ var CreditBookContractInterface = class {
 	}
 	
 
-
-	
-	// transactions
-	getAddressFromTransactionUUID(transactionuuid, callback) {
-		console.log('CreditBookContractInterface.getAddressFromTransactionUUID called for transactionuuid ' + transactionuuid);
-
+	getTitle(callback) {
 		var self = this;
 		var session = this.session;
 		
 		var contractinstance = this.getContractInstance();
-
-		var promise = contractinstance.findAddressFromUUID(transactionuuid)
-		.then(function(res) {
-			
-			if (callback)
-				callback(( res ? null: 'error'), res);
-				
-			return res;
-		});
+		var params = [];
 		
-		return promise;
-		
+		return contractinstance.method_call("title", params, callback);
 	}
+	
 
-	approve(address, tokenId, ethtx, callback) {
+	
+	// transactions
+	setTitle(newtitle, ethtx, callback) {
 		var self = this;
 		var session = this.session;
 		
@@ -298,7 +287,7 @@ var CreditBookContractInterface = class {
 		var transactionuuid = ethtx.getTransactionUUID();
 		var value = ethtx.getValue();
 		
-		console.log('CreditBookContractInterface.approve called for ' + address + " on token " + tokenId + " with gas limit " + gas + " and gasPrice " + gasPrice + " and transactionuuid " + transactionuuid);
+		console.log("CreditBookContractInterface.setTitle called with gas limit " + gas + " and gasPrice " + gasPrice + " and transactionuuid " + transactionuuid);
 
 		// we validate the transaction
 		if (!this.validateTransactionExecution(payingaccount, gas, gasPrice, callback))
@@ -312,36 +301,82 @@ var CreditBookContractInterface = class {
 	
 		var args = [];
 
-		var _tokenId = parseInt(tokenId);
-		
-		args.push(fromaddress);
-		args.push(_tokenId);
+		args.push(newtitle);
 		
 		contracttransaction.setArguments(args);
 		
 		contracttransaction.setContractTransactionUUID(transactionuuid);
 
-		contracttransaction.setMethodName('approve');
+		contracttransaction.setMethodName('setTitle');
 		
-		var promise = contractinstance.method_send(contracttransaction, callback)
+		return contractinstance.method_send(contracttransaction)
 		.then(function(res) {
-			console.log('CreditBookContractInterface.approve promise resolved, result is ' + res);
+			console.log('CreditBookContractInterface.setTitle promise resolved, result is ' + res);
+
+			if (callback)
+				callback(null, res);
 			
 			return res;
 		})
 		.catch(err => {
-			console.log('CreditBookContractInterface.approve error: ' + err);
+			console.log('CreditBookContractInterface.setTitle error: ' + err);
 
 			if (callback)
 				callback(err, null);
 
 			throw err;
 		});
-
-		return promise;
 	}
 	
+	createAccount(client_address, ethtx, callback) {
+		var contractinstance = this.getContractInstance();
 
+		var fromaccount = ethtx.getFromAccount();
+		var payingaccount = ethtx.getPayingAccount();
+
+		payingaccount = (payingaccount ? payingaccount : fromaccount);
+
+		var gas = ethtx.getGas();
+		var gasPrice = ethtx.getGasPrice();
+
+		var transactionuuid = ethtx.getTransactionUUID();
+		var value = ethtx.getValue();
+
+
+		var contractinstance = this.getContractInstance();
+		var contracttransaction = contractinstance.getContractTransactionObject(payingaccount, gas, gasPrice);
+
+		contracttransaction.setArguments(args);
+		
+		contracttransaction.setContractTransactionUUID(transactionuuid);
+		contracttransaction.setValue(value);
+
+		contracttransaction.setMethodName('createAccount');		
+		
+		var args = [];
+	
+		args.push(client_address);
+
+		contracttransaction.setArguments(args);
+		
+		return contractinstance.method_send(contracttransaction)
+		.then(function(res) {
+			console.log('CreditBookContractInterface.createAccount promise resolved, result is ' + res);
+
+			if (callback)
+				callback(null, res);
+			
+			return res;
+		})
+		.catch(err => {
+			console.log('CreditBookContractInterface.createAccount error: ' + err);
+
+			if (callback)
+				callback(err, null);
+
+			throw err;
+		});
+	}
 	
 }
 

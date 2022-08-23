@@ -14,7 +14,7 @@ else if (typeof global !== 'undefined') {
 
 var SmartContractClass = _GlobalClass.getGlobalObject().getModuleClass('common', 'SmartContract');
 
-var CreditBook = class extends SmartContractClass {
+var ERC20Credit = class extends SmartContractClass {
 	
 	constructor(session, contractaddress, web3providerurl) {
 		this.session = session;
@@ -22,20 +22,18 @@ var CreditBook = class extends SmartContractClass {
 		
 		this.web3providerurl = web3providerurl;
 
-		this.contractpath = './contracts/creditbook/CreditBook.json';
+		this.contractpath = './contracts/creditbook/ERC20Credit.json';
 		
 		// operating variables
 		this.contractinstance = null;
 
 		// local data
-		this.local_owner = null;
-		this.local_currencytoken= null;
-		this.local_title= null;
+		this.creditbook = null;
 		
 	}
 
 	getContractType() {
-		return 'CreditBook';
+		return 'ERC20Credit';
 	}
 	
 	getContractLocalPersistor() {
@@ -48,14 +46,14 @@ var CreditBook = class extends SmartContractClass {
 		var global = session.getGlobalObject();
 		var creditbookmodule = global.getModuleObject('creditbook');
 		
-		this.contractlocalpersistor = new creditbookmodule.CreditBookLocalPersistor(session, contractuuid)
+		this.contractlocalpersistor = new creditbookmodule.ERC20CreditLocalPersistor(session, contractuuid)
 		
 		return this.contractlocalpersistor;
 	}
 	
 	// initialization of object
 	initContract(json) {
-		console.log('CreditBook.initContract called for ' + this.address);
+		console.log('ERC20Credit.initContract called for ' + this.address);
 		
 		//console.log('json is ' + JSON.stringify(json));
 		
@@ -70,14 +68,8 @@ var CreditBook = class extends SmartContractClass {
 		if (json["status"])
 			this.setStatus(json["status"]);
 		
-		if (json["owner"])
-			this.local_owner = json["owner"];
-		
-		if (json["currencytoken"])
-			this.local_currencytoken = json["currencytoken"];
-		
-		if (json["title"])
-			this.local_title = json["title"];
+		if (json["creditbook"])
+			this.local_name = json["creditbook"];
 		
 		if (json["description"])
 			this.local_description = json["description"];
@@ -90,8 +82,6 @@ var CreditBook = class extends SmartContractClass {
 			
 		
 	}
-
-
 	// local part
 	getLocalJson() {
 		// ledger part
@@ -104,9 +94,7 @@ var CreditBook = class extends SmartContractClass {
 		
 		var status = this.getStatus();
 		
-		var owner = this.getLocalOwner();
-		var currencytoken = this.getLocalCurrencyToken();
-		var title = this.getLocalTitle();
+		var creditbook = this.getLocalCreditBook();
 		
 		var description = this.getLocalDescription();
 		
@@ -116,7 +104,7 @@ var CreditBook = class extends SmartContractClass {
 		
 		var json = {uuid: uuid, address: address, contracttype: contracttype, status: status, 
 				web3providerurl: web3providerurl, chainid: chainid, networkid: networkid, 
-				owner: owner, currencytoken: currencytoken, title: title,
+				creditbook: creditbook,
 				creationdate: creationdate, submissiondate: submissiondate,
 				description: description};
 		
@@ -124,77 +112,58 @@ var CreditBook = class extends SmartContractClass {
 	}
 	
 	saveLocalJson(callback) {
-		console.log('CreditBook.saveLocalJson called for ' + this.address);
+		console.log('ERC20Credit.saveLocalJson called for ' + this.address);
 
 		var persistor = this.getContractLocalPersistor();
 		
-		persistor.saveCreditBookJson(this, callback);
+		persistor.saveERC20CreditJson(this, callback);
 	}
 
 	getLocalOwner() {
-		return this.local_owner;
+		return this.owner;
 	}
 	
 	setLocalOwner(owner) {
-		this.local_owner = owner;
+		this.owner = owner;
 	}
 	
-	getLocalCurrencyToken() {
-		return this.local_currencytoken;
+	getLocalToken() {
+		return this.token;
 	}
 	
-	setLocalCurrencyToken(token) {
-		this.local_currencytoken= token;
+	setLocalToken(token) {
+		this.token = token;
 	}
 
-	getLocalTitle() {
-		return this.local_title;
-	}
-	
-	setLocalTitle(title) {
-		this.local_title = title;
-	}
-	
 	// chain part
 	getContractPath() {
-		var contractinterface = this.getContractInterface();
-		return contractinterface.getContractPath();
+		return this.contractpath;
 	}
 
 	setContractPath(path) {
-		var contractinterface = this.getContractInterface();
-		return contractinterface.setContractPath(path);
+		this.contractpath = path;
+		this.contractinstance = null;
 	}
-
-	getContractInterface() {
-		if (this.contractinterface)
-			return this.contractinterface;
+	
+	getContractInstance() {
+		if (this.contractinstance)
+			return this.contractinstance;
 		
 		var session = this.session;
-		var contractaddress = this.address;
-		var web3providerurl = this.web3providerurl;
-		
 		var global = session.getGlobalObject();
-		var creditbookmodule = global.getModuleObject('creditbook');
-		
-		this.contractinterface = new creditbookmodule.CreditBookContractInterface(session, contractaddress);
+		var ethnodemodule = global.getModuleObject('ethnode');
 
-		if (this.web3providerurl)
-		this.contractinterface.setWeb3ProviderUrl(this.web3providerurl);
-
-		if (this.chainid)
-		this.contractinterface.setChainId(this.chainid);
+		var contractpath = this.getContractPath();
 		
-		if (this.networkid)
-		this.contractinterface.setNetworkId(this.networkid);
+		this.contractinstance = ethnodemodule.getContractInstance(session, this.address, contractpath, this.web3providerurl);
 		
-		return this.contractinterface;
+		return this.contractinstance;
 	}
 
-	async getChainOwner() {
+	async getChainCreditBook() {
 		var contractinterface = this.getContractInterface();
 		
-		return contractinterface.getOwner();
+		return contractinterface.getCreditBook();
 	}
 	
 	async getChainCurrencyToken() {
@@ -203,33 +172,7 @@ var CreditBook = class extends SmartContractClass {
 		return contractinterface.getCurrencyToken();
 	}
 	
-	async getChainTitle() {
-		var contractinterface = this.getContractInterface();
-		
-		return contractinterface.getTitle();
-	}
-	
 
-	// read
-	async creditlimitOf(client_address) {
-		var contractinterface = this.getContractInterface();
-		
-		return contractinterface.creditlimitOf(client_address);
-	}
-	
-	// write
-	async setTitle(newtitle, ethtx) {
-		var contractinterface = this.getContractInterface();
-
-		return contractinterface.setTitle(newtitle, ethtx);
-	}
-	
-	async createAccount(client_address, ethtx) {
-		var contractinterface = this.getContractInterface();
-
-		return contractinterface.createAccount(client_address, ethtx);
-	}
-	
 
 }
 
@@ -244,5 +187,5 @@ else if (typeof global !== 'undefined') {
 	var _GlobalClass = ( global && global.simplestore && global.simplestore.Global ? global.simplestore.Global : null);
 }
 
-_GlobalClass.registerModuleClass('creditbook', 'CreditBook', CreditBook);
+_GlobalClass.registerModuleClass('creditbook', 'ERC20Credit', ERC20Credit);
 

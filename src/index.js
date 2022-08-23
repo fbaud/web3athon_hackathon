@@ -42,6 +42,8 @@ async function afterAppLoad() {
 	var react_pwa = ReactPWA.getObject();
 	var clientglobal = react_pwa.getGlobalObject();
 	var mvcmycreditbook = clientglobal.getModuleObject('mvc-mycreditbook');
+
+	app.getMvcMyPWA = () => { return mvcmycreditbook};
 }
 
 try {

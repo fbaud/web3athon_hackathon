@@ -1,6 +1,6 @@
 'use strict';
 
-var CreditBookLocalPersistor = class {
+var ERC20CreditLocalPersistor = class {
 	
 	constructor(session, contractuuid) {
 		this.session = session;
@@ -9,14 +9,14 @@ var CreditBookLocalPersistor = class {
 		this.commonmodule = this.session.getGlobalObject().getModuleObject('common');
 	}
 	
-	saveCreditBookJson(creditbook, callback) {
+	saveERC20CreditJson(creditbook, callback) {
 		var session = this.session;
 		var keys = ['contracts'];
 		
 		var uuid = creditbook.getUUID();
 		var json = creditbook.getLocalJson();
 		
-		console.log('CreditBookLocalPersistor.saveCreditBookJson json to save is ' + JSON.stringify(json));
+		console.log('ERC20CreditLocalPersistor.saveERC20CreditJson json to save is ' + JSON.stringify(json));
 		
 		// update cache
 		var commonmodule = this.commonmodule;
@@ -50,4 +50,4 @@ else if (typeof global !== 'undefined') {
 }
 
 
-_GlobalClass.registerModuleClass('creditbook', 'CreditBookLocalPersistor', CreditBookLocalPersistor);
+_GlobalClass.registerModuleClass('creditbook', 'ERC20CreditLocalPersistor', ERC20CreditLocalPersistor);

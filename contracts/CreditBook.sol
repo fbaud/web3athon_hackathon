@@ -17,14 +17,17 @@ contract CreditBook {
 
     address private _currency_token;
 
+    string private _title;
+
     mapping(address => address) private _accounts;
 
     mapping(address => uint) private _creditlimits;
     mapping(address => uint) private _balances;
 
-    constructor(address owneraddr, address currencyaddr) {
+    constructor(address owneraddr, address currencyaddr, string memory booktitle) {
         _owner = owneraddr;
         _currency_token = currencyaddr;
+        _title = booktitle;
     }
 
     // views
@@ -36,7 +39,11 @@ contract CreditBook {
         return _currency_token;
     }
 
-    function currencyName() public view virtual returns (string memory) {
+     function title() public view returns (string memory) {
+        return _title;
+    }
+
+   function currencyName() public view virtual returns (string memory) {
         IERC20Metadata tok = IERC20Metadata(_currency_token);
         return tok.name();
     }
@@ -72,6 +79,16 @@ contract CreditBook {
    }  
    
     // transactions
+    function setTitle(string calldata newtitle) public virtual returns (string memory) {
+        require(msg.sender == _owner);
+
+        string memory _old_title = _title;
+
+        _title = newtitle;
+
+        return _old_title;
+    }
+
     function createAccount(address client) public virtual returns (bool) {
         require(_accounts[client] == address(0));
 

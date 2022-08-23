@@ -109,7 +109,114 @@ var Module = class {
 		return  this.clientapicontrollers;
 	}
 
+	_getMvcPWAObject() {
+		var global = this.global;
+		
+		var mvcmodule = global.getModuleObject('mvc-myquote');
+
+		return mvcmodule;
+	}
+
 	// API
+	t(string) {
+		var mvcpwa = this._getMvcPWAObject();
+
+		return mvcpwa.t(string);
+	}
+
+	// credit book
+	async readCreditBooks(sessionuuid, walletuuid) {
+		if (!sessionuuid)
+			return Promise.reject('session uuid is undefined');
+		
+		var global = this.global;
+		var _apicontrollers = this._getClientAPI();
+
+		var session = await _apicontrollers.getSessionObject(sessionuuid);
+		
+		if (!session)
+			return Promise.reject('could not find session ' + sessionuuid);
+
+		if (!walletuuid) {
+			var keys = ['mypwa', 'creditbooks']; 
+			// shared keys
+		}
+		else {
+			console.log('WARNING: walletuuid specific case not implemented!!!');
+			var keys = ['mypwa', 'creditbooks']; 
+			// shared keys, also we could look in wallet
+			// with mvcmodule.getFromWallet
+		}
+	
+		var mvcpwa = this._getMvcPWAObject();
+		let creditbook_list = await mvcpwa._readClientSideJson(session, keys);
+
+		if (!creditbook_list)
+			creditbook_list = [];
+
+		return creditbook_list;
+	}
+
+	async saveCreditBook(sessionuuid, walletuuid, creditbook) {
+		var global = this.global;
+		var _apicontrollers = this._getClientAPI();
+
+		var creditbook_list = await this.readCreditBooks(sessionuuid, walletuuid);
+
+		// look not in list
+		var bInList = false;
+
+		for (var i = 0; i < creditbook_list.length; i++) {
+			if (creditbook_list[i].address == creditbook.address) {
+				bInList = true;
+				break;
+			}
+		}
+
+		if (!bInList) {
+			var session = await _apicontrollers.getSessionObject(sessionuuid);
+		
+			if (!session)
+				return Promise.reject('could not find session ' + sessionuuid);
+
+			// creditbook parameters to be saved
+			var {address, title, token, owner} = creditbook;
+	
+			if (!walletuuid) {
+				var keys = ['mypwa', 'creditbooks']; 
+				// shared keys
+			}
+			else {
+				console.log('WARNING: walletuuid specific case not implemented!!!');
+				var keys = ['mypwa', 'creditbooks']; 
+				// shared keys, also we could put in wallet
+				// with mvcmodule.putInWallet			
+			}
+		
+			var localjson = {address, title, token, owner};
+
+			localjson.savetime = Date.now();
+
+			creditbook_list.push(localjson);
+	
+			var mvcpwa = this._getMvcPWAObject();
+			return mvcpwa._saveClientSideJson(session, keys, creditbook_list);
+		}
+		else {
+			return creditbook_list;
+		}
+	}
+
+	async _createCreditBookObject(session, currency, data) {
+		// for local contract objects (before deployment)
+		var global = this.global;
+		var creditbookmodule = global.getModuleObject('creditbook');
+
+		var creditbookobj = await creditbookmodule.createCreditBookbject(session, currency, data);
+
+		return creditbookobj;
+	}
+
 	async deployCreditBook(sessionuuid, walletuuid, currencyuuid, carduuid, creditbook, feelevel) {
 		if (!sessionuuid)
 			return Promise.reject('session uuid is undefined');
@@ -146,6 +253,44 @@ var Module = class {
 
 		if (!card)
 			return Promise.reject('could not find card ' + carduuid);
+
+		var mvcpwa = this._getMvcPWAObject();
+
+		var childsession = mvcpwa._getMonitoredCardSession(session, wallet, card);
+
+		// create contract object (local)
+		var data = Object.create(null);
+
+		data['owner'] = creditbook.owner;
+		data['token'] = creditbook.token;
+
+		var creditbookobj = await this._createCreditBookObject(childsession, currency, data);
+
+		var fromaccount = card._getSessionAccountObject();
+		var from_card_scheme = card.getScheme();
+
+		var ethereumnodeaccessmodule = global.getModuleObject('ethereum-node-access');
+
+		var ethereumtransaction = ethereumnodeaccessmodule.getEthereumTransactionObject(childsession, fromaccount);
+		
+		// fee
+		var fee = await _apicontrollers.createSchemeFee(from_card_scheme, feelevel);
+
+		ethereumtransaction.setGas(fee.gaslimit);
+		ethereumtransaction.setGasPrice(fee.gasPrice);
+
+ 		var contractaddress = await creditbookobj.deploy(ethereumtransaction);
+
+		var creditbookobjaddress = creditbookobj.getAddress();
+
+		if (!creditbookobjaddress)
+			return Promise.reject('could not generate a minter for currency ' + currencyuuid);
+
+		creditbook.address = creditbookobjaddress;
+		creditbook.card_uuid = carduuid;
+		creditbook.card_address = card.getAddress();
+
+		return creditbook;	
 	}
 
 	async fetchCreditBook(sessionuuid, bookaddress) {

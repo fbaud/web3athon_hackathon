@@ -98,20 +98,17 @@ var Module = class {
 		return true;
 	}
 
+	//
+	// model
+	//
 	
-	// API
 	async createCreditBookObject(session, currency, data) {
-		if (!currency || !currency.deeds_v1)
-			return Promise.reject('currency does not support erc721');
+		if (!session)
+			return Promise.reject('session is missing');
 
-		if (!data['basetokenuri']) {
-			if (!currency.deeds_v1.basetokenuri)
-			return Promise.reject('currency does not provide a base token uri');
+		if (!currency)
+			return Promise.reject('currency is missing');
 
-			// fill basetokenuri
-			data['basetokenuri'] = currency.deeds_v1.basetokenuri;
-		}
-	
 		var global = this.global;
 		
 		// create contract using Minter class
@@ -119,9 +116,9 @@ var Module = class {
 
 		var address = (data && data['address'] ? data['address'] : null);
 
-		var name = (data && data['name'] ? data['name'] : null);
-		var symbol = (data && data['symbol'] ? data['symbol'] : null);
-		var basetokenuri = (data && data['basetokenuri'] ? data['basetokenuri'] : null);
+		var owner = (data && data['owner'] ? data['owner'] : null);
+		var currencytoken = (data && data['currencytoken'] ? data['currencytoken'] : currency.address);
+		var title = (data && data['title'] ? data['title'] : currency.address);
 		
 		var description = (data && data['description'] ? data['description'] : null);
 
@@ -135,57 +132,48 @@ var Module = class {
 		
 		contract.setAddress(address);
 
-		contract.setLocalName(name);
-		contract.setLocalSymbol(symbol);
-		contract.setLocalBaseTokenURI(basetokenuri);
+		contract.setLocalOwner(owner);
+		contract.setLocalCurrencyToken(currencytoken);
+		contract.setLocalTitle(title);
 
 		contract.setLocalDescription(description);
 		
 		return contract;	
 	}
 
-	// locker functions
-	async getLockerContent(session, currency, address) {
-		if (!currency || !currency.deeds_v1 || !currency.deeds_v1.locker)
-			return Promise.reject('currency does not support erc721');
+	async createERC20CreditObject(session, data) {
+		if (!session)
+			return Promise.reject('session is missing');
 
 		var global = this.global;
+		
+		// create contract using Minter class
+		var global = session.getGlobalObject();
 
-		var LockerClass = global.getModuleClass('creditbook', 'Locker');
+		var address = (data && data['address'] ? data['address'] : null);
 
-		var contractaddress = currency.deeds_v1.locker;
+		var creditbook = (data && data['creditbook'] ? data['creditbook'] : null);
+		
+		var description = (data && data['description'] ? data['description'] : null);
 
-		var currenciesmodule = global.getModuleObject('currencies');
 
-		var web3providerurl = await currenciesmodule.getCurrencyWeb3ProviderUrl(session, currency)
+		var ethnodemodule = global.getModuleObject('ethnode');
+		
+		var contracts = ethnodemodule.getContractsObject(session);
+		
+		
+		var contract = contracts.createBlankContractObject('ERC20Credit');
+		
+		contract.setAddress(address);
 
-		var locker = new LockerClass(session, contractaddress, web3providerurl);
+		contract.setLocalCreditBook(creditbook);
 
-		var value = await locker.retrieve(address);
-
-		return value;
+		contract.setLocalDescription(description);
+		
+		return contract;	
 	}
-	
-	async putLockerContent(session, currency, contentstring, ethtx) {
-		if (!currency || !currency.deeds_v1 || !currency.deeds_v1.locker)
-			return Promise.reject('currency does not support erc721');
 
-		var global = this.global;
 
-		var LockerClass = global.getModuleClass('creditbook', 'Locker');
-
-		var contractaddress = currency.deeds_v1.locker;
-
-		var currenciesmodule = global.getModuleObject('currencies');
-
-		var web3providerurl = await currenciesmodule.getCurrencyWeb3ProviderUrl(session, currency)
-
-		var locker = new LockerClass(session, contractaddress, web3providerurl);
-
-		var txhash = await locker.store(contentstring, ethtx);
-
-		return txhash;
-	}
 	
 }
 
