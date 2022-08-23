@@ -1,0 +1,9 @@
+[
+	{"name": "primusfinance_device", "label": "connect with a device primus account", "type": 1, "credentials": true, "uuid": "5079c781-2e3b-80b3-9ba1-5beb954a3da9"},
+	{"name": "primusfinance_hosted", "label": "connect with a hosted primus account", "type": 1, "credentials": true, "uuid": "4bf223aa-f5d9-db3e-cf25-2954462756a9"},
+	{"name": "primusfinance_deported", "label": "connect with a deported primus account", "type": 1, "credentials": true, "uuid": "ed9594be-3fd0-193e-3882-0efd05540484"},
+	{"name": "primusfinance_citadel", "label": "connect with a citadel primus account", "type": 1, "credentials": true, "uuid": "62ef4792-4ba6-0c27-c992-572684e9f9f5"},
+	{"name": "primusfinance_facebook", "label": "connect with a primus facebook account", "type": 1, "provider": "facebook", "servicename": "facebook", "uuid": "19d97186-a8c9-378a-6897-cdab74b654aa"},
+	{"name": "primusfinance_alfajores", "label": "connect with a primus hosted celo alfajores", "type": 1, "credentials": true, "uuid": "958e5afb-f491-9f2a-47d8-7dc60e4cf2fe"}	
+	
+]

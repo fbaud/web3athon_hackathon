@@ -1,0 +1,59 @@
+{
+	"mumb_USDC": {
+		"name": "USDC on Mumbai",
+		"symbol": "USDC",
+		"decimals":6,
+		"uuid": "1a845cbe-d234-9859-5226-b15804b41a35", 
+		"address": "0x5EbC30fA7CA65631f16de82f647A8021b05DE1Fc", 
+		"web3providerurl": "https://rpc-mumbai.maticvigil.com/",
+		"scheme_uuid": "974aa1d6-e340-4332-8a7e-1434c962e41a",
+		"ops": {"canpay": true, "cantopup": false, "canswap": false, "canregisterdeeds": true},
+		"deeds_v1": {
+			"locker": "0xa3aef7358d25d8d571e40edef7b7dbf675bf7bb5",
+			"basetokenuri": "https://mytokens-rest.primusmoney.com/mytokens-dapp/api/mytokens/web3/token_metadata",
+			"create_minter_cost_units": 260,
+			"create_deed_cost_units": 8,
+			"transfer_deed_cost_units": 4,
+			"add_clause_cost_units": 56
+		},
+		"provider": "provider.js"
+	},
+	"mumb_USDT": {
+		"name": "USDT on Mumbai",
+		"symbol": "USDT",
+		"decimals":6,
+		"uuid": "7a10f36e-8171-3cb8-0ccc-2b0fd398ac8d", 
+		"address": "0xC88DD147Db6EE02327E9A9722DF132EDe089cB62", 
+		"web3providerurl": "https://rpc-mumbai.maticvigil.com/",
+		"scheme_uuid": "974aa1d6-e340-4332-8a7e-1434c962e41a",
+		"ops": {"canpay": true, "cantopup": false, "canswap": false, "canregisterdeeds": true},
+		"deeds_v1": {
+			"locker": "0xa3aef7358d25d8d571e40edef7b7dbf675bf7bb5",
+			"basetokenuri": "https://mytokens-rest.primusmoney.com/mytokens-dapp/api/mytokens/web3/token_metadata",
+			"create_minter_cost_units": 260,
+			"create_deed_cost_units": 8,
+			"transfer_deed_cost_units": 4,
+			"add_clause_cost_units": 56
+		},
+		"provider": "provider.js"
+	},
+	"mumb_BUSD": {
+		"name": "BUSD on Mumbai",
+		"symbol": "BUSD",
+		"decimals":18,
+		"uuid": "d7fc038e-6319-a19e-360c-ada8d871586d", 
+		"address": "0xBfef2e685f0030af9f325c7a71a643029EeB65c4", 
+		"web3providerurl": "https://rpc-mumbai.maticvigil.com/",
+		"scheme_uuid": "974aa1d6-e340-4332-8a7e-1434c962e41a",
+		"ops": {"canpay": true, "cantopup": false, "canswap": false, "canregisterdeeds": true},
+		"deeds_v1": {
+			"locker": "0xa3aef7358d25d8d571e40edef7b7dbf675bf7bb5",
+			"basetokenuri": "https://mytokens-rest.primusmoney.com/mytokens-dapp/api/mytokens/web3/token_metadata",
+			"create_minter_cost_units": 260,
+			"create_deed_cost_units": 8,
+			"transfer_deed_cost_units": 4,
+			"add_clause_cost_units": 56
+		},
+		"provider": "provider.js"
+	}
+}

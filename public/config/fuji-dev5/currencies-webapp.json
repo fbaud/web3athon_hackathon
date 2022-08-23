@@ -1,0 +1,21 @@
+{
+	"fuji_USDC": {
+		"name": "USDC on Fuji",
+		"symbol": "USDC",
+		"decimals":6,
+		"uuid": "c5f5ab70-bd35-2c6b-bf58-cbf5c9952bef", 
+		"address": "0xF58CCf4E09e895C6f50890d4b66C03422daC64F6", 
+		"web3providerurl": "https://api.avax-test.network/ext/bc/C/rpc",
+		"scheme_uuid": "978e6ac7-3e63-0be2-a4f4-5e498bae790e",
+		"ops": {"canpay": true, "cantopup": false, "canswap": false, "canregisterdeeds": true},
+		"deeds_v1": {
+			"locker": "0xa3aef7358d25d8d571e40edef7b7dbf675bf7bb5",
+			"basetokenuri": "https://mytokens-rest.primusmoney.com/mytokens-dapp/api/mytokens/web3/token_metadata",
+			"create_minter_cost_units": 260,
+			"create_deed_cost_units": 8,
+			"transfer_deed_cost_units": 4,
+			"add_clause_cost_units": 56
+		},
+		"provider": "provider.js"
+	}
+}

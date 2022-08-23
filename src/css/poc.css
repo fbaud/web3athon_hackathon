@@ -1,0 +1,18 @@
+.AuthCancelButton {
+	width: 90pt;
+	height: 25pt;	
+	margin: 5pt;
+}
+
+.Dev-Info {
+	margin-top: 30pt;
+	font-size: 5pt;
+}
+
+.Explanations {
+	font-size: 12pt;
+}
+
+.NoList {
+	width: 100%;
+}

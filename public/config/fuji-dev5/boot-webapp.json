@@ -1,0 +1,38 @@
+{
+	"name": "my-pwa-creditbook",
+	"updatetime": "November 19, 2021",
+	"env": "dev",
+	"privacy_url": "https://www.primusmoney.com/privacy_en",
+	"routes": {
+		"xtra_routes": {
+			"creditbook": {
+				"disabled": false,
+				"name": "creditbook"
+			}
+		}
+		
+	},
+	"menulinks": {
+		"xtra_menulinks": [
+			{"disabled": false, "type": "separator"},
+			{"disabled": false, "type": "link", "route": "creditbook", "label": "Credit Book"},
+			{"disabled": false, "type": "separator"},
+			{"disabled": false, "type": "link", "route": "creditbook_grant", "label": "Grant Credit"},
+			{"disabled": false, "type": "link", "route": "creditbook_bill", "label": "Bill"},
+			{"disabled": false, "type": "separator"},
+			{"disabled": false, "type": "link", "route": "creditbook_request", "label": "Request Credit"},
+			{"disabled": false, "type": "link", "route": "creditbook_pay", "label": "Pay with Credit"}
+		]
+	},
+	"homelinks": {
+		"xtra_homelinks": [
+			{"type":"link", "pathname": "/creditbook", "label": "Credit Book"}
+		]
+	},
+	"currencies": {
+		"disable": []
+	},
+	"schemes": {
+
+	}
+}

@@ -1,0 +1,26 @@
+{
+	"t-cusd": {
+		"name": "Celo USD",
+		"symbol": "cUSD",
+		"decimals": 18,
+		"uuid": "812d43b2-be77-efb7-f269-417aad0f3b17", 
+		"description": "Pseudo cUSD on celo testnet alfajores",
+		"address": "0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1", 
+		"scheme_uuid": "36ee1e57-778f-c9e3-1152-5856f31ef98f",
+		"ops": {"canpay": true, "cantopup": false, "canswap": false, "canregisterdeeds": false},
+		"provider": "provider.js",
+		"pretrade_scheme_uuid": "b1a18ba9-1609-3f66-c1fd-42ae0073efac"
+	},
+	"t-ceur": {
+		"name": "Celo EUR",
+		"symbol": "cEUR",
+		"decimals": 18,
+		"uuid": "3890d8d7-32d0-1a71-1b5d-9680a11e5a5b", 
+		"description": "Pseudo cEUR on celo testnet alfajores",
+		"address": "0x10c892A6EC43a53E45D0B916B4b7D383B1b78C0F", 
+		"scheme_uuid": "36ee1e57-778f-c9e3-1152-5856f31ef98f",
+		"ops": {"canpay": true, "cantopup": false, "canswap": false, "canregisterdeeds": false},
+		"provider": "provider.js",
+		"pretrade_scheme_uuid": "b1a18ba9-1609-3f66-c1fd-42ae0073efac"
+	}
+}
