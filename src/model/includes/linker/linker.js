@@ -8,7 +8,7 @@ var Linker = class {
 		
 		this.web3providerurl = web3providerurl;
 
-		this.contractpath = './contracts/pwa-pocs/Linker.json';
+		this.contractpath = './contracts/linker/Linker.json';
 		
 		// operating variables
 		this.contractinstance = null;

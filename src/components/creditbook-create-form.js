@@ -285,12 +285,18 @@ class CreditBookCreateForm extends React.Component {
 	
 			// credit book
 			let creditbook = {owner: currentcard.address, currencytoken: currency.address, title};
+			
 			let currencyuuid = currency.uuid;
+
+			// for persistence
+			creditbook.uuid = this.app.guid();
+			creditbook.currencyuuid = currencyuuid;
+			creditbook.carduuid = card.uuid;
 
 			// check we have enough transaction credits
 			let tx_fee = {};
 			tx_fee.transferred_credit_units = 0;
-			let deploy_cost_units = 225;
+			let deploy_cost_units = 350;
 			tx_fee.estimated_cost_units = deploy_cost_units;
 
 			// need a higher feelevel than standard this.app.getCurrencyFeeLevel(currencyuuuid)
@@ -312,7 +318,14 @@ class CreditBookCreateForm extends React.Component {
 			}
 			
 			// deploy
-			creditbook = mvcmycreditbook.deployCreditBook(rootsessionuuid, walletuuid, currencyuuid, carduuid, creditbook, _feelevel)
+			creditbook = await mvcmycreditbook.deployCreditBook(rootsessionuuid, walletuuid, currencyuuid, carduuid, creditbook, _feelevel)
+			.catch(err => {
+				console.log('error in CreditBookCreateForm.onSubmit: ' + err);
+			});
+
+			// save
+			debugger;
+			await mvcmycreditbook.saveCreditBook(rootsessionuuid, walletuuid, creditbook)			
 			.catch(err => {
 				console.log('error in CreditBookCreateForm.onSubmit: ' + err);
 			});

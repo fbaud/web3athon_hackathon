@@ -146,6 +146,57 @@ var CreditBook = class extends SmartContractClass {
 	setLocalTitle(title) {
 		this.local_title = title;
 	}
+
+	// deployment
+	deploy(ethtx, callback) {
+		var self = this;
+		var session = this.session;
+		//var EthereumNodeAccess = session.getEthereumNodeAccessInstance();
+
+		var contractinterface = this.getContractInterface();
+		
+		var owneraddr = this.getLocalOwner();
+		var currencyaddr = this.getLocalCurrencyToken()
+		var booktitle = this.getLocalTitle();
+		
+		var transactionuuid = ethtx.getTransactionUUID();
+
+		if (!transactionuuid) {
+			transactionuuid = this.getUUID();
+			ethtx.setTransactionUUID(transactionuuid);
+		}
+		
+		this.setStatus(self.Contracts.STATUS_SENT);
+		
+		return contractinterface.deploy(owneraddr, currencyaddr, booktitle, ethtx, function (err, res) {
+			console.log('CreditBook.deploy transaction committed, transaction hash is: ' + res);
+			
+			self.setStatus(self.Contracts.STATUS_PENDING);
+		})
+		.then(function(res) {
+			console.log('CreditBook.deploy promise of deployment resolved, address is: ' + res);
+			
+			if (res) {
+				self.setAddress(contractinterface.getAddress());
+				self.setStatus(self.Contracts.STATUS_DEPLOYED);
+				
+				if (callback)
+					callback(null, res);
+			}
+			else {
+				if (callback)
+					callback('error deploying credit book ' + booktitle, null);
+			}
+			
+			return res;
+		})		
+		.catch(err => {
+			if (callback)
+				callback(err, null);
+
+			throw err;
+		});
+	}
 	
 	// chain part
 	getContractPath() {

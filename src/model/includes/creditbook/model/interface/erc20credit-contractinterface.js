@@ -6,7 +6,7 @@ var ERC20CreditContractInterface = class {
 		this.session = session;
 		this.address = contractaddress;
 		
-		this.contractpath = './contracts/ERC20Credit.json';
+		this.contractpath = './contracts/creditbook/ERC20Credit.json';
 		
 		this.web3providerurl = null;
 

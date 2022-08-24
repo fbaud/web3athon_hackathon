@@ -261,7 +261,7 @@ var Module = class {
 		var bInList = false;
 
 		for (var i = 0; i < creditbook_list.length; i++) {
-			if (creditbook_list[i].address == creditbook.address) {
+			if (creditbook_list[i].uuid == creditbook.uuid) {
 				bInList = true;
 				break;
 			}
@@ -274,7 +274,7 @@ var Module = class {
 				return Promise.reject('could not find session ' + sessionuuid);
 
 			// creditbook parameters to be saved
-			var {address, title, token, owner} = creditbook;
+			var {uuid, address, title, currencyuuid, carduuid} = creditbook;
 	
 			if (!walletuuid) {
 				var keys = ['mypwa', 'creditbooks']; 
@@ -287,7 +287,7 @@ var Module = class {
 				// with mvcmodule.putInWallet			
 			}
 		
-			var localjson = {address, title, token, owner};
+			var localjson = {uuid, address, title, walletuuid, currencyuuid, carduuid};
 
 			localjson.savetime = Date.now();
 
@@ -373,8 +373,7 @@ var Module = class {
 		ethereumtransaction.setGas(fee.gaslimit);
 		ethereumtransaction.setGasPrice(fee.gasPrice);
 
- 		debugger;
-		//var contractaddress = await creditbookobj.deploy(ethereumtransaction);
+		var contractaddress = await creditbookobj.deploy(ethereumtransaction);
 
 		var creditbookobjaddress = creditbookobj.getAddress();
 
@@ -382,8 +381,6 @@ var Module = class {
 			return Promise.reject('could not generate a credit book for currency ' + currencyuuid);
 
 		creditbook.address = creditbookobjaddress;
-		creditbook.card_uuid = carduuid;
-		creditbook.card_address = card.getAddress();
 
 		return creditbook;	
 	}

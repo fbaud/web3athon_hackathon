@@ -6,7 +6,7 @@ var CreditBookContractInterface = class {
 		this.session = session;
 		this.address = contractaddress;
 		
-		this.contractpath = './contracts/CreditBook.json';
+		this.contractpath = './contracts/creditbook/CreditBook.json';
 		
 		this.web3providerurl = null;
 
@@ -170,7 +170,7 @@ var CreditBookContractInterface = class {
 	}
 	
 
-	deploy(tokenName, tokenSymbol, tokenBaseURI, ethtx, callback) {
+	deploy(owneraddr, currencyaddr, booktitle, ethtx, callback) {
 		if (!ethtx)
 			return Promise.reject('ethereum transaction is undefined');
 
@@ -189,7 +189,7 @@ var CreditBookContractInterface = class {
 		var transactionuuid = ethtx.getTransactionUUID();
 		var value = ethtx.getValue();
 		
-		console.log('CreditBookContractInterface.deploy called for ' + tokenName + " from " + fromaddress + " with gas limit " + gas + " and gasPrice " + gasPrice + " and transactionuuid " + transactionuuid);
+		console.log('CreditBookContractInterface.deploy called for ' + owneraddr + " from " + fromaddress + " with gas limit " + gas + " and gasPrice " + gasPrice + " and transactionuuid " + transactionuuid);
 		
 		
 		// we validate the transaction
@@ -205,9 +205,9 @@ var CreditBookContractInterface = class {
 	
 		var args = [];
 		
-		args.push(tokenName);
-		args.push(tokenSymbol);
-		args.push(tokenBaseURI);
+		args.push(owneraddr);
+		args.push(currencyaddr);
+		args.push(booktitle);
 		
 		contracttransaction.setArguments(args);
 		
