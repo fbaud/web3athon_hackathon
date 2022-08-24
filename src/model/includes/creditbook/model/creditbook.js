@@ -17,15 +17,7 @@ var SmartContractClass = _GlobalClass.getGlobalObject().getModuleClass('common',
 var CreditBook = class extends SmartContractClass {
 	
 	constructor(session, contractaddress, web3providerurl) {
-		this.session = session;
-		this.address = contractaddress;
-		
-		this.web3providerurl = web3providerurl;
-
-		this.contractpath = './contracts/creditbook/CreditBook.json';
-		
-		// operating variables
-		this.contractinstance = null;
+		super(session, contractaddress, web3providerurl);
 
 		// local data
 		this.local_owner = null;

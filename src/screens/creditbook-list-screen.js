@@ -17,7 +17,8 @@ class CreditBookListScreen extends React.Component {
 		
 		this.app = this.props.app;
 
-		this.getMvcMyPWA = this.app.getMvcMyPWA;
+		this.getMvcMyPWAObject = this.app.getMvcMyPWAObject;
+		this.getMvcMyCreditBookObject = this.app.getMvcMyCreditBookObject;
 
 		this.state = {
 			loaded: false,
@@ -36,7 +37,7 @@ class CreditBookListScreen extends React.Component {
 		this.checking = true;
 
 		try {
-			let mvcmypwa = this.getMvcMyPWA();
+			let mvcmycreditbook = this.getMvcMyCreditBookObject();
 
 			let rootsessionuuid = this.props.rootsessionuuid;
 			let walletuuid = this.props.currentwalletuuid;
@@ -44,7 +45,7 @@ class CreditBookListScreen extends React.Component {
 			let app_nav_state = this.app.getNavigationState();
 			let app_nav_target = app_nav_state.target;
 
-			let creditbook_list = await mvcmypwa.readCreditBooks(rootsessionuuid, walletuuid);
+			let creditbook_list = await mvcmycreditbook.readCreditBooks(rootsessionuuid, walletuuid);
 
 			console.log('');
 	
@@ -62,7 +63,7 @@ class CreditBookListScreen extends React.Component {
 	componentWillUnmount() {
 		console.log('CreditBookListScreen.componentWillUnmount called');
 		let app = this.app;
-		let mvcmypwa = this.getMvcMyPWA();
+		let mvcmycreditbook = this.getMvcMyCreditBookObject();
 		
 	}
 	
@@ -71,7 +72,7 @@ class CreditBookListScreen extends React.Component {
 
 		return (
 			<div className="Container">
-				<div className="Instructions">Credit Book.</div>
+				<div className="Instructions">List of credit books</div>
 				<CreditBookListView {...this.props} app = {this.app} 	parent={this} />
 			</div>
 		);		

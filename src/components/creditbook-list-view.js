@@ -18,38 +18,19 @@ class CreditBookListView extends React.Component {
 		this.app = this.props.app;
 		this.parent = this.props.parent;
 
-		this.getMvcMyQuoteObject = this.app.getMvcMyQuoteObject;
+		this.getMvcMyPWAObject = this.app.getMvcMyPWAObject;
+		this.getMvcMyCreditBookObject = this.app.getMvcMyCreditBookObject;
 		
 		this.uuid = this.app.guid();
 
 		this.checking = false;
 
 		this.state = {
-			title: 'Notifications',
-			instructions: 'Click on the notification you want to treat.',
+			title: 'Credit Books',
+			instructions: 'Click on the credit book you want to open.',
 			current_challenge_name: 'unknown',
 			items: []
 		};		
-	}
-	
-	getMvcMyPocs() {
-		if ( typeof window !== 'undefined' && typeof window.GlobalClass !== 'undefined' && window.GlobalClass ) {
-			var _GlobalClass = window.GlobalClass;
-		}
-		else if (typeof window !== 'undefined') {
-			var _GlobalClass = ( window && window.simplestore && window.simplestore.Global ? window.simplestore.Global : null);
-		}
-		else if (typeof global !== 'undefined') {
-			// we are in node js
-			var _GlobalClass = ( global && global.simplestore && global.simplestore.Global ? global.simplestore.Global : null);
-		}
-	
-		if (_GlobalClass) {
-			var global = _GlobalClass.getGlobalObject();
-
-			return global.getModuleObject('mvc-mypocs');
-		}
-		
 	}
 	
 	componentDidUpdate(prevProps) {
@@ -72,19 +53,8 @@ class CreditBookListView extends React.Component {
 			let app_nav_state = this.app.getNavigationState();
 			let app_nav_target = app_nav_state.target;
 
-			// check wallet is unlocked
-			let unlocked = await this.app.checkWalletUnlocked()
-			.catch(err => {
-			});
-
-			if (!unlocked) {
-				let params = (app_nav_target ? app_nav_target.params : null);
-				this.app.gotoRoute('login', params);
-				return;
-			}
-
-			let mvcmyquote = this.getMvcMyQuoteObject();
-			var mvcmypocs = this.getMvcMyPocs();
+			let mvcmypwa = this.getMvcMyPWAObject();
+			var mvcmycreditbook = this.getMvcMyCreditBookObject();
 
 			let rootsessionuuid = this.props.rootsessionuuid;
 			let walletuuid = this.props.currentwalletuuid;
@@ -96,92 +66,27 @@ class CreditBookListView extends React.Component {
 			let authcard_config = await this.getAuthCardConfig();
 			let current_challenge_name = await this.getCurrentChallengeName();
 
-			let sessionuuid = await mvcmypocs.getWalletSession(rootsessionuuid, walletuuid);
+			let sessionuuid = await mvcmycreditbook.getWalletSession(rootsessionuuid, walletuuid);
 			
 			// from wallet
-			let walletschemeinfo = await mvcmyquote.getSessionScheme(sessionuuid).catch(err => {});
+			let walletschemeinfo = await mvcmypwa.getSessionScheme(sessionuuid).catch(err => {});
 			let walletschemeuuid = walletschemeinfo.uuid;
 			
 			// from auth-card.json
 			let authschemeuuid = authcard_config.schemeuuid;
 
 			if (walletschemeuuid !== authschemeuuid) {
-				let authschemeinfo = await mvcmyquote.getSchemeInfo(rootsessionuuid, authschemeuuid);
+				let authschemeinfo = await mvcmypwa.getSchemeInfo(rootsessionuuid, authschemeuuid);
 				this.app.alert('please login on ' + authschemeinfo.name);
 				return;
 			}
 
-			// look for notifications
+			// look for credit books
 			let schemeconfig = await this.getSchemeConfig(authschemeuuid);
 			let buyer_address = authcard_config.widget_params.buyer_address;
-			let transactions = await mvcmypocs.getAddressTransactions(rootsessionuuid, walletuuid, schemeconfig, buyer_address).catch(err => {});
+			let creditbooks = await mvcmycreditbook.readCreditBooks(sessionuuid, walletuuid).catch(err => {});
 
-			let challenges = [];
-			let completed = [];
-			let now = Date.now();
-
-			for (var i = 0; i < (transactions ? transactions.length : 0); i++) {
-				let item = {};
-				let tx = transactions[i];
-				let dataobj;
-				let lapse = 24 * 60 * 60 * 1000; // 1 day
-				let tx_age = now - tx.timeStamp *1000;
-
-				if ( tx_age > lapse)
-					continue; // too old
-
-				try {
-					dataobj = JSON.parse(tx.input_decoded_utf8);
-				}
-				catch(e) {
-					// another type of transaction
-					dataobj = {};
-				}
-
-				if (!dataobj.chlguuid)
-					continue; // not a challenge, or a result
-
-				if (dataobj.type === 'result') {
-					item.hash = tx.hash;
-					item.chlguuid = dataobj.chlguuid;
-					item.auth_tx_hash = dataobj.auth_tx_hash;
-
-					completed.push(item.chlguuid);
-				}
-				else if (dataobj.type === 'cancel') {
-					item.chlguuid = dataobj.chlguuid;
-
-					completed.push(item.chlguuid);
-				}
-				else {
-					item.hash = tx.hash;
-					item.uuid = dataobj.chlguuid;
-					item.chlguuid = dataobj.chlguuid;
-	
-					item.web3_provider_url = dataobj.web3_provider_url;
-					item.tokenaddress = dataobj.tokenaddress;
-					item.amount = dataobj.amount;
-	
-					item.to_address = dataobj.to_address;
-					item.identified = dataobj.identified;
-	
-					challenges.push(item);
-				}
-			}
-
-			// just keep challenges that have not been completed
-			let items = [];
-
-			for (var i = 0; i < challenges.length; i++) {
-				let challenge = challenges[i];
-				if (completed.includes(challenge.chlguuid))
-					continue;
-
-				items.push(challenge);
-			}
-
-
-			this.setState({current_challenge_name, items});
+			this.setState({current_challenge_name, items: creditbooks});
 		}
 		catch(e) {
 			console.log('exception in CreditBookListView.checkNavigationState: '+ e);
@@ -203,19 +108,19 @@ class CreditBookListView extends React.Component {
 
 
 	async getCurrentChallengeName() {
-		let json = await this.mvcmyquote.loadConfig('/pocs/auth-card');
+		let json = await this.mvcmypwa.loadConfig('/pocs/auth-card');
 
 		return json.current_challenge;
 	}
 
 	async getAuthCardConfig() {
-		let json = await this.mvcmyquote.loadConfig('/pocs/auth-card');
+		let json = await this.mvcmypwa.loadConfig('/pocs/auth-card');
 
 		return json.challenges[json.current_challenge];
 	}
 
 	async getSchemeConfig(schemeuuid) {
-		let schemes_json = await this.mvcmyquote.loadConfig('schemes-webapp');
+		let schemes_json = await this.mvcmypwa.loadConfig('schemes-webapp');
 		let schemes = Object.values(schemes_json);
 
 		for (var i = 0; i < (schemes ? schemes.length : 0); i++) {
@@ -236,11 +141,11 @@ class CreditBookListView extends React.Component {
 
 
 	renderItem(item){
-		let mvcmyquote = this.app.getMvcMyQuoteObject();
+		let mvcmypwa = this.app.getMvcMyPWAObject();
 
 		let uuid = item.uuid;
 
-		let tx_hash = mvcmyquote.fitString(item.hash, 21);
+		let tx_hash = mvcmypwa.fitString(item.hash, 21);
 		let amount = item.amount;
 
 
@@ -266,7 +171,7 @@ class CreditBookListView extends React.Component {
 				<tbody className="ListItem" >
 				{(items && items.length ?
 				items.map((item, index) => {return (this.renderItem(item));})
-				: <tr className="NoList">No notifications in the list</tr>
+				: <tr className="NoList">No credit book in the list</tr>
 				)}
 				</tbody>
 			</Table>

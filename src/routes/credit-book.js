@@ -1,11 +1,11 @@
 import CreditBookListScreen from '../screens/creditbook-list-screen.js';
-import CreditBookScreen from '../screens/creditbook-home-screen.js';
+import CreditBookScreen from '../screens/creditbook-home.js';
 
 import GrantCreditScreen from '../screens/grant-credit-screen.js';
 import BillScreen from '../screens/bill-screen.js';
 
 import CreditCardListScreen from '../screens/creditcard-list-screen.js';
-import CreditCardScreen from '../screens/creditcard-home-screen.js';
+import CreditCardScreen from '../screens/creditcard-home.js';
 
 import RequestCreditScreen from '../screens/request-credit-screen.js';
 import PayScreen from '../screens/pay-screen.js';

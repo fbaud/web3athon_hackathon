@@ -19,6 +19,9 @@ var Module = class {
 		var global = this.global;
 		
 		this.isready = true;
+
+		this.Linker = global.getModuleClass('common', 'Linker');
+
 	}
 	
 	// compulsory  module functions
@@ -124,7 +127,98 @@ var Module = class {
 		return mvcpwa.t(string);
 	}
 
+	//
+	// Storage-access
+	//
+
+	// Linker
+	async _getLinker(session, contractaddress, web3providerurl) {
+		var global = this.global;
+
+		// create linker object
+		const Linker = this.Linker;
+		const linker = new Linker(session, contractaddress, web3providerurl);
+
+		return linker;
+	}
+	
+	async storeLinkerValue(sessionuuid, walletuuid, carduuid, contractaddress, txhash, next_txhash, feelevel = null) {
+		if (!sessionuuid)
+			return Promise.reject('session uuid is undefined');
+
+		if (!walletuuid)
+			return Promise.reject('wallet uuid is undefined');
+		
+		if (!carduuid)
+			return Promise.reject('card uuid is undefined');
+		
+		var global = this.global;
+		var _apicontrollers = this._getClientAPI();
+
+		var session = await _apicontrollers.getSessionObject(sessionuuid);
+		
+		if (!session)
+			return Promise.reject('could not find session ' + sessionuuid);
+		
+		var wallet = await _apicontrollers.getWalletFromUUID(session, walletuuid);
+	
+		if (!wallet)
+			return Promise.reject('could not find wallet ' + walletuuid);
+	
+		var card = await wallet.getCardFromUUID(carduuid);
+
+		if (!card)
+			return Promise.reject('could not find card ' + carduuid);
+
+		let cardscheme = card.getScheme();
+		let web3providerurl = cardscheme.getWeb3ProviderUrl();
+
+		let linker = await this._getLinker(session, contractaddress, web3providerurl);
+
+		// create ethereum transaction object
+		var fromaccount = card._getSessionAccountObject();
+		var from_card_scheme = card.getScheme();
+
+		var ethereumnodeaccessmodule = global.getModuleObject('ethereum-node-access');
+		var ethereumtransaction = ethereumnodeaccessmodule.getEthereumTransactionObject(session, fromaccount);
+		
+		// fee
+		var fee = await _apicontrollers.createSchemeFee(from_card_scheme, feelevel);
+
+		ethereumtransaction.setGas(fee.gaslimit);
+		ethereumtransaction.setGasPrice(fee.gasPrice);
+
+		
+		let tx_hash = await linker.store(txhash, next_txhash, ethereumtransaction);
+
+		return tx_hash;
+	}
+	
+	async retrieveLinkerValue(sessionuuid, contractaddress, web3providerurl, txhash) {
+		if (!sessionuuid)
+			return Promise.reject('session uuid is undefined');
+
+		var global = this.global;
+		var _apicontrollers = this._getClientAPI();
+
+		var session = await _apicontrollers.getSessionObject(sessionuuid);
+		
+		if (!session)
+			return Promise.reject('could not find session ' + sessionuuid);
+		
+		let linker = await this._getLinker(session, contractaddress, web3providerurl)
+		
+		let value = await linker.retrieve(txhash);
+
+		if (value == '0x0000000000000000000000000000000000000000000000000000000000000000')
+			return;
+
+		return value;
+	}
+
+	//
 	// credit book
+	//
 	async readCreditBooks(sessionuuid, walletuuid) {
 		if (!sessionuuid)
 			return Promise.reject('session uuid is undefined');
@@ -212,7 +306,7 @@ var Module = class {
 		var global = this.global;
 		var creditbookmodule = global.getModuleObject('creditbook');
 
-		var creditbookobj = await creditbookmodule.createCreditBookbject(session, currency, data);
+		var creditbookobj = await creditbookmodule.createCreditBookObject(session, currency, data);
 
 		return creditbookobj;
 	}
@@ -233,6 +327,7 @@ var Module = class {
 		
 		var global = this.global;
 		var _apicontrollers = this._getClientAPI();
+		var mvcpwa = this._getMvcPWAObject();
 
 		var session = await _apicontrollers.getSessionObject(sessionuuid);
 		
@@ -244,7 +339,7 @@ var Module = class {
 		if (!wallet)
 			return Promise.reject('could not find wallet ' + walletuuid);
 	
-		var currency = await this.getCurrencyFromUUID(sessionuuid, currencyuuid);
+		var currency = await mvcpwa.getCurrencyFromUUID(sessionuuid, currencyuuid);
 
 		if (!currency)
 			return Promise.reject('could not find currency ' + currencyuuid);
@@ -254,15 +349,14 @@ var Module = class {
 		if (!card)
 			return Promise.reject('could not find card ' + carduuid);
 
-		var mvcpwa = this._getMvcPWAObject();
-
-		var childsession = mvcpwa._getMonitoredCardSession(session, wallet, card);
+		var childsession = await mvcpwa._getMonitoredCardSession(session, wallet, card);
 
 		// create contract object (local)
 		var data = Object.create(null);
 
 		data['owner'] = creditbook.owner;
-		data['token'] = creditbook.token;
+		data['currencytoken'] = creditbook.token;
+		data['title'] = creditbook.title;
 
 		var creditbookobj = await this._createCreditBookObject(childsession, currency, data);
 
@@ -279,12 +373,13 @@ var Module = class {
 		ethereumtransaction.setGas(fee.gaslimit);
 		ethereumtransaction.setGasPrice(fee.gasPrice);
 
- 		var contractaddress = await creditbookobj.deploy(ethereumtransaction);
+ 		debugger;
+		//var contractaddress = await creditbookobj.deploy(ethereumtransaction);
 
 		var creditbookobjaddress = creditbookobj.getAddress();
 
 		if (!creditbookobjaddress)
-			return Promise.reject('could not generate a minter for currency ' + currencyuuid);
+			return Promise.reject('could not generate a credit book for currency ' + currencyuuid);
 
 		creditbook.address = creditbookobjaddress;
 		creditbook.card_uuid = carduuid;
