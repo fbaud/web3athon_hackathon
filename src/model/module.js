@@ -308,8 +308,10 @@ var Module = class {
 		if (!walletuuid)
 			return Promise.reject('wallet uuid is undefined');
 
-		let creditbooks = await this.readCreditBooks(sessionuuid, walletuuid);
+		if (!creditbookuuid)
+			return Promise.reject('credit book uuid is undefined');
 
+		let creditbooks = await this.readCreditBooks(sessionuuid, walletuuid);
 
 		for (var i = 0; i < (creditbooks ? creditbooks.length : 0); i++) {
 			if (creditbooks[i].uuid == creditbookuuid)
@@ -373,7 +375,7 @@ var Module = class {
 		var data = Object.create(null);
 
 		data['owner'] = creditbook.owner;
-		data['currencytoken'] = creditbook.token;
+		data['currencytoken'] = creditbook.currencytoken;
 		data['title'] = creditbook.title;
 
 		var creditbookobj = await this._createCreditBookObject(childsession, currency, data);
@@ -403,18 +405,221 @@ var Module = class {
 		return creditbook;	
 	}
 
-	async fetchCreditBook(sessionuuid, bookaddress) {
+	async fetchCreditBook(sessionuuid, walletuuid, currencyuuid, bookaddress) {
 		if (!sessionuuid)
 			return Promise.reject('session uuid is undefined');
 		
+ 		if (!walletuuid)
+			return Promise.reject('wallet uuid is undefined');
+		
+		if (!currencyuuid)
+			return Promise.reject('currency uuid is undefined');
+		
+		
+		var global = this.global;
 		var _apicontrollers = this._getClientAPI();
+		var mvcpwa = this._getMvcPWAObject();
 
 		var session = await _apicontrollers.getSessionObject(sessionuuid);
-	
+		
 		if (!session)
 			return Promise.reject('could not find session ' + sessionuuid);
+		
+		var wallet = await _apicontrollers.getWalletFromUUID(session, walletuuid).catch(err => {});
+		
+ 		if (!wallet)
+			return Promise.reject('could not find wallet ' + walletuuid);
+	
+		var currency = await mvcpwa.getCurrencyFromUUID(sessionuuid, currencyuuid);
 
-		return null;
+		if (!currency)
+			return Promise.reject('could not find currency ' + currencyuuid);
+		
+
+		// get a child session on correct scheme
+		var currencyscheme = await mvcpwa._getCurrencyScheme(session, currency);
+		var childsession = await mvcpwa._getMonitoredSchemeSession(session, wallet, currencyscheme);
+	
+		let data = {};
+		data['address'] = bookaddress;
+
+		var creditbookobj = await this._createCreditBookObject(childsession, currency, data);
+
+		let creditbook = {};
+		creditbook.owner = await creditbookobj.getChainOwner();
+		creditbook.currencytoken = await creditbookobj.getChainCurrencyToken();
+		creditbook.title = await creditbookobj.getChainTitle();
+
+	
+		return creditbook;
+	}
+
+	// credit accounts
+	async _getCreditBookObject(sessionuuid, walletuuid, carduuid, creditbookuuid) {
+		if (!sessionuuid)
+		return Promise.reject('session uuid is undefined');
+	
+		if (!walletuuid)
+			return Promise.reject('wallet uuid is undefined');
+
+		if (!creditbookuuid)
+			return Promise.reject('credit book uuid is undefined');
+
+		var global = this.global;
+		var _apicontrollers = this._getClientAPI();
+		var mvcpwa = this._getMvcPWAObject();
+
+		var session = await _apicontrollers.getSessionObject(sessionuuid);
+		
+		if (!session)
+			return Promise.reject('could not find session ' + sessionuuid);
+		
+		var wallet = await _apicontrollers.getWalletFromUUID(session, walletuuid);
+		
+		if (!wallet)
+			return Promise.reject('could not find wallet ' + walletuuid);
+
+		var creditbookdata = await this.readCreditBook(sessionuuid, walletuuid, creditbookuuid);
+
+		if (!creditbookdata)
+			return Promise.reject('could not find credit book for uuid ' + creditbookuuid);
+
+		let currencyuuid = creditbookdata.currencyuuid;
+
+		let currency = await mvcpwa.getCurrencyFromUUID(sessionuuid, currencyuuid);
+
+		if (!currency)
+			return Promise.reject('could not find currency ' + currencyuuid);
+
+		var card = await wallet.getCardFromUUID(carduuid);
+
+		if (!card)
+			return Promise.reject('could not find card ' + carduuid);
+
+		let cardchemeuuid = card.getSchemeUUID();
+		let currencychemeuuid = currency.scheme_uuid;
+		if (cardchemeuuid != currencychemeuuid)
+			return Promise.reject('card' + carduuid + ' does not match currency ' + currencyuuid);
+
+		// child session
+		var childsession = await mvcpwa._getMonitoredCardSession(session, wallet, card);
+	
+	
+		// get credit book on chain
+		let data = {};
+		data['address'] = creditbookdata.address;
+
+		var creditbookobj = await this._createCreditBookObject(childsession, currency, data);
+	
+		return creditbookobj;
+	}
+
+	async createCreditAccount(sessionuuid, walletuuid, carduuid, creditbookuuid, accountdata, client_address, feelevel) {
+		if (!sessionuuid)
+		return Promise.reject('session uuid is undefined');
+	
+		if (!walletuuid)
+			return Promise.reject('wallet uuid is undefined');
+
+		if (!carduuid)
+			return Promise.reject('card uuid is undefined');
+		
+		if (!creditbookuuid)
+			return Promise.reject('credit book uuid is undefined');
+
+		// get credit book on chain
+		let creditbookobj = await this._getCreditBookObject(sessionuuid, walletuuid, carduuid, creditbookuuid);
+
+
+		var global = this.global;
+		var _apicontrollers = this._getClientAPI();
+		var mvcpwa = this._getMvcPWAObject();
+
+		var session = await _apicontrollers.getSessionObject(sessionuuid);
+		
+		if (!session)
+			return Promise.reject('could not find session ' + sessionuuid);
+		
+		var wallet = await _apicontrollers.getWalletFromUUID(session, walletuuid);
+		
+		if (!wallet)
+			return Promise.reject('could not find wallet ' + walletuuid);
+
+		var card = await wallet.getCardFromUUID(carduuid);
+
+		if (!card)
+			return Promise.reject('could not find card ' + carduuid);
+
+		// child session corresponding to card to perform transaction
+		var childsession = await mvcpwa._getMonitoredCardSession(session, wallet, card);
+
+		var fromaccount = card._getSessionAccountObject();
+		var from_card_scheme = card.getScheme();
+
+		var ethereumnodeaccessmodule = global.getModuleObject('ethereum-node-access');
+
+		var ethereumtransaction = ethereumnodeaccessmodule.getEthereumTransactionObject(childsession, fromaccount);
+		
+		// fee
+		var fee = await _apicontrollers.createSchemeFee(from_card_scheme, feelevel);
+
+		ethereumtransaction.setGas(fee.gaslimit);
+		ethereumtransaction.setGasPrice(fee.gasPrice);
+
+		// create account with crypted data
+		let account_string = JSON.stringify(accountdata);
+		let crypted_account_string = await mvcpwa.aesEncryptString(sessionuuid, walletuuid, carduuid, account_string);
+		
+		let res = await creditbookobj.createCreditAccount(crypted_account_string, client_address, ethereumtransaction);
+	
+	}
+
+	async fetchCreditAccounts(sessionuuid, walletuuid, carduuid, creditbookuuid) {
+		if (!sessionuuid)
+		return Promise.reject('session uuid is undefined');
+	
+		if (!walletuuid)
+			return Promise.reject('wallet uuid is undefined');
+
+		if (!carduuid)
+			return Promise.reject('card uuid is undefined');
+		
+		if (!creditbookuuid)
+			return Promise.reject('credit book uuid is undefined');
+
+		// get credit book on chain
+		let creditbookobj = await this._getCreditBookObject(sessionuuid, walletuuid, carduuid, creditbookuuid);
+
+		var global = this.global;
+		var _apicontrollers = this._getClientAPI();
+		var mvcpwa = this._getMvcPWAObject();
+
+
+
+		// get list of accounts
+		let array = await creditbookobj.accounts();
+
+		// decrypt the strings
+		let accounts = [];
+
+		for (var i = 0; i < (array ? array.length : 0); i++) {
+			let account_string = await mvcpwa.aesDecryptString(sessionuuid, walletuuid, carduuid, array[i]);
+			let account_data = {};
+
+			try {
+				account_data = JSON.parse(account_string);
+			}
+			catch(e) {
+				account_data = {};
+			}
+
+			account_data.uuid = i;
+			account_data.creditbookuuid = creditbookuuid;
+
+			accounts.push(account_data);
+		}
+
+		return accounts;
 	}
 }
 

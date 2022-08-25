@@ -259,6 +259,13 @@ var CreditBook = class extends SmartContractClass {
 		
 		return contractinterface.creditlimitOf(client_address);
 	}
+
+	async accounts() {
+		var contractinterface = this.getContractInterface();
+
+		return contractinterface.accounts();
+	}
+	
 	
 	// write
 	async setTitle(newtitle, ethtx) {
@@ -267,10 +274,10 @@ var CreditBook = class extends SmartContractClass {
 		return contractinterface.setTitle(newtitle, ethtx);
 	}
 	
-	async createAccount(client_address, ethtx) {
+	async createAccount(accountdata, client_address, ethtx) {
 		var contractinterface = this.getContractInterface();
 
-		return contractinterface.createAccount(client_address, ethtx);
+		return contractinterface.createAccount(accountdata, client_address, ethtx);
 	}
 	
 

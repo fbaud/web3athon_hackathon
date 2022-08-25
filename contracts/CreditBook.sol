@@ -19,7 +19,8 @@ contract CreditBook {
 
     string private _title;
 
-    mapping(address => address) private _accounts;
+    string [] private _accounts;
+    mapping(address => address) private _erc20credits;
 
     mapping(address => uint) private _creditlimits;
     mapping(address => uint) private _balances;
@@ -68,7 +69,7 @@ contract CreditBook {
     }
 
    function creditToken(address client) public view virtual returns (address) {
-        address _credittokenaddr = _accounts[client];
+        address _credittokenaddr = _erc20credits[client];
 
         if (_credittokenaddr == address(0))
             return address(0);
@@ -80,7 +81,7 @@ contract CreditBook {
    
     // transactions
     function setTitle(string calldata newtitle) public virtual returns (string memory) {
-        require(msg.sender == _owner);
+        require(msg.sender == _owner, "Only for owner");
 
         string memory _old_title = _title;
 
@@ -89,12 +90,19 @@ contract CreditBook {
         return _old_title;
     }
 
-    function createAccount(address client) public virtual returns (bool) {
-        require(_accounts[client] == address(0));
+    // accounts
+    function accounts() public view returns( string  [] memory){
+        return _accounts;
+    }
 
+    function createAccount(string calldata accountdata, address client) public virtual returns (bool) {
+        require(client != address(0), "Client address needed");
+        require(_erc20credits[client] == address(0), "Account for client already exists");
+
+        _accounts.push(accountdata);
         ERC20Credit _credittoken = new ERC20Credit(address(this), client);
 
-        _accounts[client] = address(_credittoken);
+        _erc20credits[client] = address(_credittoken);
  
         return true;
    }

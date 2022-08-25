@@ -95,75 +95,7 @@ var CreditBookContractInterface = class {
 		return true;
 	}
 	
-	validateTransferFromExecution(fromaccount, toaddress, tokenid, callback) {
-		var session = this.session;
-		var fromaddress = fromaccount.getAddress();
-		
-		// we check the account is the owner
-		// TODO: otherwise check is it is an operator
-		return this.ownerOf(tokenid)
-		.then(function(res) {
-			if (session.areAddressesEqual(res, fromaddress)) {
-				if (callback)
-					callback(null, true);
 
-				return true;
-			}
-			else {
-				if (callback)
-					callback(null, false);
-
-				throw 'ERR_CAN_NOT_TRANSFER_ERC721TOKEN';
-			}
-		});
-		
-	}
-	
-	validateBurnExecution(fromaccount, amount, callback) {
-		var fromaddress = fromaccount.getAddress();
-		
-		// we check the account balance is sufficient
-		return this.balanceOf(fromaddress, function(err, balance) {
-			if (err) {
-				if (callback)
-					callback('error checking balance of ' + err, null);
-			}
-			else {
-				if (parseInt(amount.toString(),10) > parseInt(balance.toString(),10))
-					throw 'account ' + fromaddress + ' balance (' + balance + ') is too low to burn '+ amount + ' token(s).';
-				
-				if (callback)
-					callback(null, true);
-				
-				return true;
-			}
-		});
-		
-	}
-	
-	validateBurnFromExecution(fromaccount, burnedaddress, amount, callback) {
-		var fromaddress = fromaccount.getAddress();
-		
-		// we check the account balance is sufficient
-		return this.allowance(burnedaddress, fromaddress, function(err, allowance) {
-			if (err) {
-				if (callback)
-					callback('error checking allowance of ' + err, null);
-			}
-			else {
-				console.log('allowance of ' + fromaddress + ' on ' + burnedaddress + ' is ' + allowance);
-				if (parseInt(amount.toString(),10) > parseInt(allowance.toString(),10))
-					throw 'account ' + fromaddress + ' allowance (' + allowance + ') is too low to burn '+ amount + ' token(s) from ' + burnedaddress + '.';
-				
-				if (callback)
-					callback(null, true);
-				
-				return true;
-			}
-		});
-		
-	}
-	
 	// contract api
 	activateContractInstance(callback) {
 		return this.getContractInstance().activate(callback);
@@ -268,6 +200,16 @@ var CreditBookContractInterface = class {
 		return contractinstance.method_call("title", params, callback);
 	}
 	
+	accounts(callback) {
+		var self = this;
+		var session = this.session;
+		
+		var contractinstance = this.getContractInstance();
+		var params = [];
+		
+		return contractinstance.method_call("accounts", params, callback);
+	}
+	
 
 	
 	// transactions
@@ -328,7 +270,7 @@ var CreditBookContractInterface = class {
 		});
 	}
 	
-	createAccount(client_address, ethtx, callback) {
+	createAccount(accountdata, client_address, ethtx, callback) {
 		var contractinstance = this.getContractInstance();
 
 		var fromaccount = ethtx.getFromAccount();
@@ -355,6 +297,7 @@ var CreditBookContractInterface = class {
 		
 		var args = [];
 	
+		args.push(accountdata);
 		args.push(client_address);
 
 		contracttransaction.setArguments(args);

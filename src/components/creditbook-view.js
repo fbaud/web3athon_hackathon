@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
-import { Button, Dropdown, DropdownButton, FormGroup, FormControl, FormLabel, InputGroup } from 'react-bootstrap';
+import { Button,  FormGroup, FormControl, FormLabel, InputGroup, Table} from 'react-bootstrap';
 
 import PropTypes from 'prop-types';
 
@@ -21,6 +21,9 @@ class CreditBookView extends React.Component {
 
 		
 		let title = '';
+
+        let accounts = [];
+
 		let description = '';
 		let amount = 0;
 		let currency = {symbol: ''};
@@ -30,6 +33,8 @@ class CreditBookView extends React.Component {
 		
 		this.state = {
 				title,
+                accounts,
+
 				description,
 				amount,
 				currency,
@@ -79,17 +84,23 @@ class CreditBookView extends React.Component {
 
 		if (app_nav_target && (app_nav_target.route == 'creditbook') && (app_nav_target.reached == false)) {
 			var params = app_nav_target.params;
-            var creditbookuuid = params.creditbookuuid;
+			var creditbookuuid = params.creditbookuuid;
 
-            if (creditbookuuid) {
-                let creditbook = await mvcmycreditbook.readCreditBook(rootsessionuuid, walletuuid, creditbookuuid).catch(err => {});
+			if (creditbookuuid) {
+				let creditbook = await mvcmycreditbook.readCreditBook(rootsessionuuid, walletuuid, creditbookuuid).catch(err => {});
 
-                if (creditbook) {
-                    let title = creditbook.title;
+				if (creditbook) {
+					let title = creditbook.title;
+					let creditbookuuid = creditbook.uuid;
 
-                    this.setState({title});
-                }
-            }
+					// corresponding card
+					let carduuid = creditbook.carduuid;
+
+					let accounts = await mvcmycreditbook.fetchCreditAccounts(rootsessionuuid, walletuuid, carduuid, creditbookuuid);
+
+					this.setState({title, accounts});
+				}
+			}
 
 
 			// mark target as reached
@@ -126,6 +137,17 @@ class CreditBookView extends React.Component {
 		textArea.remove();
 
 		this.app.alert("Share link has been copied to clipboard");
+	}
+
+	// user action
+	async onClickAccount(account) {
+		console.log('CreditBookListView.onClickItem pressed!');
+
+		let accountuuid = account.uuid;
+
+		let params = {action: 'view', accountuuid};
+
+		this.app.gotoRoute('creditcard', params);
 	}
 
 	
@@ -218,11 +240,46 @@ class CreditBookView extends React.Component {
 		  );
 	}
 
+    renderAccount(account) {
+		let mvcmypwa = this.app.getMvcMyPWAObject();
+
+		let uuid = account.uuid;
+
+		let address = account.client;
+
+		return (
+			<tr key={uuid} onClick={() => this.onClickAccount(account)}>
+				<td>{address}</td>
+			</tr>
+		);   
+    }
+
+    renderAccountList() {
+		let {accounts} = this.state;
+		return (
+			<Table responsive>
+				<thead className="ListHeader">
+					<tr>
+					<th>Address</th>
+					</tr>
+				</thead>
+				<tbody className="ListItem" >
+				{(accounts && accounts.length ?
+				accounts.map((account, index) => {return (this.renderAccountItem(account));})
+				: <tr className="NoList">No credit account in the list</tr>
+				)}
+				</tbody>
+			</Table>
+		);
+    }
+
 	render() {
 		return (
 			<div className="Container">
 				<div className="Title">Credit Book View</div>
 				{ this.renderCreditBookView()}
+				<hr></hr>
+				{ this.renderAccountList()}
 			</div>
 		  );
 	}
