@@ -28,7 +28,6 @@ class CreditBookListView extends React.Component {
 		this.state = {
 			title: 'Credit Books',
 			instructions: 'Click on the credit book you want to open.',
-			current_challenge_name: 'unknown',
 			items: []
 		};		
 	}
@@ -59,34 +58,23 @@ class CreditBookListView extends React.Component {
 			let rootsessionuuid = this.props.rootsessionuuid;
 			let walletuuid = this.props.currentwalletuuid;
 
-			let My_Widget_Client = require('@primusmoney/my_widget_react_client');
-			let my_widget_client = My_Widget_Client.getObject();
+			// look for credit books
+			let creditbooks = await mvcmycreditbook.readCreditBooks(rootsessionuuid, walletuuid).catch(err => {});
 
-			// auth card config
-			let authcard_config = await this.getAuthCardConfig();
-			let current_challenge_name = await this.getCurrentChallengeName();
+			let items = [];
 
-			let sessionuuid = await mvcmycreditbook.getWalletSession(rootsessionuuid, walletuuid);
-			
-			// from wallet
-			let walletschemeinfo = await mvcmypwa.getSessionScheme(sessionuuid).catch(err => {});
-			let walletschemeuuid = walletschemeinfo.uuid;
-			
-			// from auth-card.json
-			let authschemeuuid = authcard_config.schemeuuid;
+			for (var i = 0; i < creditbooks.length; i++) {
+				let creditbook = creditbooks[i];
+				let bookcurrency = 	await mvcmypwa.getCurrencyFromUUID(rootsessionuuid, creditbooks[i].currencyuuid).catch(err => {});
 
-			if (walletschemeuuid !== authschemeuuid) {
-				let authschemeinfo = await mvcmypwa.getSchemeInfo(rootsessionuuid, authschemeuuid);
-				this.app.alert('please login on ' + authschemeinfo.name);
-				return;
+				let item = {uuid: creditbooks[i].uuid, address: creditbooks[i].address, title: creditbooks[i].title, currency: bookcurrency};
+
+				item.formattedtime = mvcmypwa.formatDate(creditbooks[i].savetime/1000, 'YYYY-mm-dd HH:MM:SS');
+
+				items.push(item);
 			}
 
-			// look for credit books
-			let schemeconfig = await this.getSchemeConfig(authschemeuuid);
-			let buyer_address = authcard_config.widget_params.buyer_address;
-			let creditbooks = await mvcmycreditbook.readCreditBooks(sessionuuid, walletuuid).catch(err => {});
-
-			this.setState({current_challenge_name, items: creditbooks});
+			this.setState({items});
 		}
 		catch(e) {
 			console.log('exception in CreditBookListView.checkNavigationState: '+ e);
@@ -107,52 +95,34 @@ class CreditBookListView extends React.Component {
 	}
 
 
-	async getCurrentChallengeName() {
-		let json = await this.mvcmypwa.loadConfig('/pocs/auth-card');
-
-		return json.current_challenge;
-	}
-
-	async getAuthCardConfig() {
-		let json = await this.mvcmypwa.loadConfig('/pocs/auth-card');
-
-		return json.challenges[json.current_challenge];
-	}
-
-	async getSchemeConfig(schemeuuid) {
-		let schemes_json = await this.mvcmypwa.loadConfig('schemes-webapp');
-		let schemes = Object.values(schemes_json);
-
-		for (var i = 0; i < (schemes ? schemes.length : 0); i++) {
-			if (schemes[i].uuid === schemeuuid)
-				return schemes[i];
-		}
-	}
-
-
-
+	// user action
 	async onClickItem(item) {
 		console.log('CreditBookListView.onClickItem pressed!');
 
-		this.parent.current_notification = item;
-	
-		this.parent.setAction('authform');
+		let creditbookuuid = item.uuid;
+
+		let params = {action: 'view', creditbookuuid};
+
+		this.app.gotoRoute('creditbook', params);
 	}
 
-
+	// rendering
 	renderItem(item){
 		let mvcmypwa = this.app.getMvcMyPWAObject();
 
 		let uuid = item.uuid;
 
-		let tx_hash = mvcmypwa.fitString(item.hash, 21);
-		let amount = item.amount;
+		let title = mvcmypwa.fitString(item.title, 21);
+		let currency = item.currency;
+		let time = item.formattedtime;
+		let currency_symbol = (currency ?  currency.symbol : '?');
 
 
 		return (
 			<tr key={uuid} onClick={() => this.onClickItem(item)}>
-				<td>{tx_hash}</td>
-				<td>{amount}</td>
+				<td>{time}</td>
+				<td>{currency_symbol}</td>
+				<td>{title}</td>
 			</tr>
 		);
 	}
@@ -164,8 +134,9 @@ class CreditBookListView extends React.Component {
 			<Table responsive>
 				<thead className="ListHeader">
 					<tr>
-					<th>Hash</th>
-					<th>Amount</th>
+					<th>Time</th>
+					<th>Ccy</th>
+					<th>Title</th>
 					</tr>
 				</thead>
 				<tbody className="ListItem" >
@@ -184,7 +155,6 @@ class CreditBookListView extends React.Component {
 				<div className="Instructions">{this.state.title}</div>
 				<div className="Explanations">{this.state.instructions}</div>
 				{this.renderList()}
-				<div className="Dev-Info">{( this.app.exec_env === 'dev' ? 'Working on challenge ' + this.state.current_challenge_name : '')}</div>
 			</div>
 		);
 	}

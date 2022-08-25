@@ -301,6 +301,24 @@ var Module = class {
 		}
 	}
 
+	async readCreditBook(sessionuuid, walletuuid, creditbookuuid) {
+		if (!sessionuuid)
+			return Promise.reject('session uuid is undefined');
+		
+		if (!walletuuid)
+			return Promise.reject('wallet uuid is undefined');
+
+		let creditbooks = await this.readCreditBooks(sessionuuid, walletuuid);
+
+
+		for (var i = 0; i < (creditbooks ? creditbooks.length : 0); i++) {
+			if (creditbooks[i].uuid == creditbookuuid)
+				return creditbooks[i];
+		}
+		
+	}
+
+
 	async _createCreditBookObject(session, currency, data) {
 		// for local contract objects (before deployment)
 		var global = this.global;

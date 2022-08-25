@@ -53,19 +53,14 @@ class CreditBookScreen extends React.Component {
 			var params = app_nav_target.params;
 
 			if (params) {
-				let txhash = params.txhash;
 				let lineinfo = '';
 				let action = (params.action ? params.action : 'create');
 	
-				if (txhash) {
-					// retrieve info from firenze
-					lineinfo = txhash;
-				}
-	
-				this.setState({action, txhash, lineinfo});
+
+				this.setState({action, lineinfo});
 			}
 
-			// BountyView will take care of marking target reached
+			// CreditBookView or CreditBookCreateForm will take care of marking target reached
 		}
 
 		this.setState({loaded: true});
