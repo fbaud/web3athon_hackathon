@@ -17,35 +17,39 @@ class CreditBookView extends React.Component {
 		this.getMvcMyPWAObject = this.app.getMvcMyPWAObject;
 		this.getMvcMyCreditBookObject = this.app.getMvcMyCreditBookObject;
 
-		this.dataobject = null;
+		this.uuid = this.app.guid();
+
+		this.closing = false;
+
+
+		this.creditbookuuid = null;
 
 		
 		let title = '';
-
-        let accounts = [];
-
-		let description = '';
-		let amount = 0;
 		let currency = {symbol: ''};
-		let currencies= [];
-		let signingkey = null;
+
+		let client_name = null;
+		let client_address = null;
+
+		let accounts = [];
+
 		let currentcard = null;
 		
 		this.state = {
-				title,
-                accounts,
-
-				description,
-				amount,
 				currency,
-				currencies,
-				signingkey,
+				title,
+				client_name,
+ 				client_address,
+                accounts,
 				currentcard,
-				isOwner: false,
 				message_text: 'loading...',
-				sharelinkmessage: 'loading...',
-				sharelink: 'loading...'
+				processing: false
 		}
+	}
+
+	_setState(state) {
+		if (this.closing !== true)
+		this.setState(state);
 	}
 
 
@@ -90,6 +94,8 @@ class CreditBookView extends React.Component {
 				let creditbook = await mvcmycreditbook.readCreditBook(rootsessionuuid, walletuuid, creditbookuuid).catch(err => {});
 
 				if (creditbook) {
+					this.creditbookuuid = creditbook.uuid;
+
 					let title = creditbook.title;
 					let creditbookuuid = creditbook.uuid;
 
@@ -98,7 +104,17 @@ class CreditBookView extends React.Component {
 
 					let accounts = await mvcmycreditbook.fetchCreditAccounts(rootsessionuuid, walletuuid, carduuid, creditbookuuid);
 
-					this.setState({title, accounts});
+					// currency
+					let currencyuuid = creditbook.currencyuuid;
+					let currency = await mvcmypwa.getCurrencyFromUUID(rootsessionuuid, currencyuuid)
+					.catch(err => {
+						console.log('error in QuoteView.checkNavigationState: ' + err);
+					});
+
+					// current card
+					let maincurrencycard = await mvcmypwa.getCurrencyCard(rootsessionuuid, walletuuid, currencyuuid).catch(err=>{});
+
+					this.setState({currency, title, currentcard: maincurrencycard, accounts});
 				}
 			}
 
@@ -108,36 +124,112 @@ class CreditBookView extends React.Component {
 		}
 	}
 
+	// end of life
+	componentWillUnmount() {
+		console.log('CreditBookView.componentWillUnmount called');
+		
+		this.closing = true;
+	}
+
+
 	
 	// user actions
 	async onSubmit() {
 		console.log('onSubmit pressed!');
+
+		let mvcmypwa = this.getMvcMyPWAObject();
+		let mvcmycreditbook = this.getMvcMyCreditBookObject();
+
+		let rootsessionuuid = this.props.rootsessionuuid;
+		let walletuuid = this.props.currentwalletuuid;
 		
-		if (this.dataobject) {
-			let params = {action: 'create', txhash: this.dataobject.txhash, currencyuuid: this.dataobject.currencyuuid, dataobject: this.dataobject};
-			this.app.gotoRoute('order', params);
+		let wallet;
+		let carduuid;
+		let card;
+
+		this._setState({processing: true});
+
+		try {
+			const {currentcard, client_address, client_name} = this.state;
+
+			if (currentcard) {
+				card = currentcard;
+				carduuid = card.uuid;
+			}
+			else {
+				this.app.alert('No currency card available');
+				this._setState({processing: false});
+				return;
+			}
+
+			if (!client_name || (client_name.length == 0)) {
+				this.app.alert('You need to enter a client name');
+				this._setState({processing: false});
+				return;
+			}
+	
+			if (!client_address || (client_address.length == 0)) {
+				this.app.alert('You need to enter a client address');
+				this._setState({processing: false});
+				return;
+			}
+	
+	
+			var creditbookuuid = this.creditbookuuid;
+
+			// check we have enough transaction credits
+			let tx_fee = {};
+			tx_fee.transferred_credit_units = 0;
+			let create_account_cost_units = 55;
+			tx_fee.estimated_cost_units = create_account_cost_units;
+
+			// need a higher feelevel than standard this.app.getCurrencyFeeLevel(currencyuuuid)
+			let _feelevel = await mvcmypwa.getRecommendedFeeLevel(rootsessionuuid, walletuuid, card.uuid, tx_fee);
+
+			var canspend = await mvcmypwa.canCompleteTransaction(rootsessionuuid, walletuuid, card.uuid, tx_fee, _feelevel).catch(err => {});
+	
+			if (!canspend) {
+				if (tx_fee.estimated_fee.execution_credits > tx_fee.estimated_fee.max_credits) {
+					this.app.alert('The execution of this transaction is too large: ' + tx_fee.estimated_fee.execution_units + ' credit units.');
+					this._setState({processing: false});
+					return;
+				}
+				else {
+					this.app.alert('You must add transaction units to the source card. You need at least ' + tx_fee.required_units + ' credit units.');
+					this._setState({processing: false});
+					return;
+				}
+			}
+			
+			// create client account
+			let accountdata = {name: client_name, address: client_address};
+
+			let txhash = await mvcmycreditbook.createCreditAccount(rootsessionuuid, walletuuid, carduuid, creditbookuuid, accountdata, client_address, _feelevel)
+			.catch(err => {
+				console.log('error in CreditBookView.onSubmit: ' + err);
+			});
+	
+			// goto new account
+			let params = {action: 'view', creditbookuuid, client_address};
+			this.app.gotoRoute('creditcard', params);
+			
+			this._setState({processing: false});
+	
+			return true;
 		}
-		else
-			this.app.alert('Credit Book parameters not found');
+		catch(e) {
+			console.log('exception in onSubmit: ' + e);
+			this.app.error('exception in onSubmit: ' + e);
 
-		return true;
+			this.app.alert('could not create client account');
+
+			this._setState({processing: false});
+		}
+
+
+		return false;
 	}
 
-	async onShareLinkClick() {
-		const {sharelink} = this.state;
-		
-		// create a textarea on the fly, then remove it to
-		// be able to copy to clipboard
-		var textArea = document.createElement("textarea");
-		textArea.value = sharelink;
-
-		document.body.appendChild(textArea);
-		textArea.select();
-		document.execCommand("Copy");
-		textArea.remove();
-
-		this.app.alert("Share link has been copied to clipboard");
-	}
 
 	// user action
 	async onClickAccount(account) {
@@ -152,8 +244,44 @@ class CreditBookView extends React.Component {
 
 	
 	// rendering
+	renderAccountCreateForm() {
+		let { client_name, client_address} = this.state;
+
+		return (
+			<div className="Form">
+				<FormGroup controlId="client_name">
+					<FormLabel>Client Name</FormLabel>
+					<InputGroup>
+						<FormControl 
+							autoFocus
+							type="text"
+							value={client_name}
+							onChange={e => this.setState({client_name: e.target.value})}
+						/>
+					</InputGroup>
+				</FormGroup>
+				<FormGroup controlId="client_address">
+					<FormLabel>Client Address</FormLabel>
+					<InputGroup>
+						<FormControl 
+							autoFocus
+							type="text"
+							value={client_address}
+							onChange={e => this.setState({client_address: e.target.value})}
+						/>
+					</InputGroup>
+				</FormGroup>
+
+				<Button onClick={this.onSubmit.bind(this)} type="submit">
+				 Create an account
+				</Button>
+
+			</div>
+		  );
+	}
+
 	renderCreditBookView() {
-		let { title, description, amount, currency, registration_text, message_text, sharelinkmessage, sharelink, isOwner } = this.state;
+		let { currency, title, message_text} = this.state;
 		
 		return (
 			<div className="Form">
@@ -168,74 +296,26 @@ class CreditBookView extends React.Component {
 				  />
 				</FormGroup>
 
-				<FormGroup controlId="description">
-				  <FormLabel>Description</FormLabel>
-				  <FormControl 
-					disabled
-					as="textarea" 
-					rows="5" 
-					autoFocus
-					type="text"
-					value={description}
-					onChange={e => this.setState({description: e.target.value})}
-				  />
-				</FormGroup>
-				
-				<FormGroup className="Proposal" controlId="proposal">
-				<span className="ProposalCol">
-				<FormLabel>Amount</FormLabel>
-				  <FormControl 
-					disabled
-					autoFocus
-					type="text"
-					value={amount}
-					onChange={e => this.setState({amount: e.target.value})}
-				  />
-				</span>
-				<span className="ProposalCol">
-				<FormLabel>Currency</FormLabel>
-				<InputGroup>
-					<FormControl 
-						disabled
-						autoFocus
-						type="text"
-						value={currency.symbol}
-						onChange={e => this.onChangeCurrency(e)}
-					/>
-				</InputGroup>
-				 </span>
+				<FormGroup controlId="currency">
+					<FormLabel>Currency</FormLabel>
+					<InputGroup>
+						<FormControl 
+							disabled
+							autoFocus
+							type="text"
+							value={currency.name}
+							onChange={e => this.onChangeCurrency(e)}
+						/>
+					</InputGroup>
 				</FormGroup>
 
-				<div className="TextBox">
-				  {registration_text}
-			  	</div>
-
-				<div className="TextBox">
-					<div>{sharelinkmessage}</div>
-					<div className="ShareBlock">
-					<span className="ShareLink" onClick={this.onShareLinkClick.bind(this)}>{sharelink}</span>
-					<span className="ShareIcon" onClick={this.onShareLinkClick.bind(this)}><FontAwesomeIcon icon={faCopy} /></span>
-					</div>
-				</div>
-
-				<Button onClick={this.onSubmit.bind(this)} type="submit">
-				  Register an order
-				</Button>
+				{this.renderAccountCreateForm()}
 
 				<div className="TextBox">
 				  {message_text}
 			  	</div>
 
-
-				{(this.dataobject ?
-				<div>
-				<hr></hr>
-				<div>
-					List of credits
-				</div>
-				</div> :
-				<></>
-				)}
+				
 			</div>
 		  );
 	}
@@ -245,10 +325,12 @@ class CreditBookView extends React.Component {
 
 		let uuid = account.uuid;
 
-		let address = account.client;
+		let name = mvcmypwa.fitString(account.name, 21);
+		let address = mvcmypwa.fitString(account.address, 21);
 
 		return (
 			<tr key={uuid} onClick={() => this.onClickAccount(account)}>
+				<td>{name}</td>
 				<td>{address}</td>
 			</tr>
 		);   
@@ -257,19 +339,26 @@ class CreditBookView extends React.Component {
     renderAccountList() {
 		let {accounts} = this.state;
 		return (
-			<Table responsive>
-				<thead className="ListHeader">
-					<tr>
-					<th>Address</th>
-					</tr>
-				</thead>
-				<tbody className="ListItem" >
-				{(accounts && accounts.length ?
-				accounts.map((account, index) => {return (this.renderAccountItem(account));})
-				: <tr className="NoList">No credit account in the list</tr>
-				)}
-				</tbody>
-			</Table>
+			<div>
+				<hr></hr>
+				<div>
+					List of accounts
+				</div>
+				<Table responsive>
+					<thead className="ListHeader">
+						<tr>
+						<th>Name</th>
+						<th>Address</th>
+						</tr>
+					</thead>
+					<tbody className="ListItem" >
+					{(accounts && accounts.length ?
+					accounts.map((account, index) => {return (this.renderAccount(account));})
+					: <tr className="NoList">No credit account in the list</tr>
+					)}
+					</tbody>
+				</Table>
+			</div>
 		);
     }
 

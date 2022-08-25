@@ -570,8 +570,13 @@ var Module = class {
 		let account_string = JSON.stringify(accountdata);
 		let crypted_account_string = await mvcpwa.aesEncryptString(sessionuuid, walletuuid, carduuid, account_string);
 		
-		let res = await creditbookobj.createCreditAccount(crypted_account_string, client_address, ethereumtransaction);
+		let txhash = await creditbookobj.createAccount(crypted_account_string, client_address, ethereumtransaction);
+
+		if (txhash) {
+			accountdata.txhash = txhash;
+		}
 	
+		return txhash;
 	}
 
 	async fetchCreditAccounts(sessionuuid, walletuuid, carduuid, creditbookuuid) {

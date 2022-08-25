@@ -21,8 +21,8 @@
 			{"disabled": false, "type": "separator"},
 			{"disabled": false, "type": "link", "route": "creditbook_bill", "label": "Bill"},
 			{"disabled": false, "type": "separator"},
-			{"disabled": false, "type": "link", "route": "creditcard", "label": "Create Credit Card"},
 			{"disabled": false, "type": "link", "route": "creditcards", "label": "Credit Cards"},
+			{"disabled": false, "type": "link", "route": "creditcard", "label": "Create Credit Card"},
 			{"disabled": false, "type": "link", "route": "creditbook_request", "label": "Request Credit"},
 			{"disabled": false, "type": "link", "route": "creditbook_pay", "label": "Pay with Credit"}
 		]
@@ -30,7 +30,9 @@
 	"homelinks": {
 		"xtra_homelinks": [
 			{"type":"link", "pathname": "/creditbook", "label": "Create a Credit Book"},
-			{"type":"link", "pathname": "/creditbooks", "label": "Credit Books"}
+			{"type":"link", "pathname": "/creditbooks", "label": "Credit Books"},
+			{"disabled": false, "type": "separator"},
+			{"type":"link", "pathname": "/creditcards", "label": "Credit Cards"}
 		]
 	},
 	"currencies": {

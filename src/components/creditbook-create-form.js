@@ -231,7 +231,7 @@ class CreditBookCreateForm extends React.Component {
 
 	
 			if (!title || (title.length == 0)) {
-				this.app.alert('You need to enter a title for this deed');
+				this.app.alert('You need to enter a title for this credit book');
 				this._setState({processing: false});
 				return;
 			}
@@ -266,7 +266,7 @@ class CreditBookCreateForm extends React.Component {
 					}
 				}
 				else {
-					this.app.alert('You need to provide your private key for ' + currency.name + ' in order to sign and fund your deed');
+					this.app.alert('You need to provide your private key for ' + currency.name + ' in order to create a credit book');
 					this._setState({processing: false});
 					return;
 				}
@@ -324,7 +324,6 @@ class CreditBookCreateForm extends React.Component {
 			});
 
 			// save
-			debugger;
 			await mvcmycreditbook.saveCreditBook(rootsessionuuid, walletuuid, creditbook)			
 			.catch(err => {
 				console.log('error in CreditBookCreateForm.onSubmit: ' + err);
@@ -396,7 +395,7 @@ class CreditBookCreateForm extends React.Component {
 		return (
 			<span>
 				{(currentcard ?
-					<FormGroup className="CurrencyCard" controlId="address">
+					<FormGroup className="CurrencyCard" controlId="currencycard">
 					<span className="CardIconCol">
 						<CurrencyCardIcon
 							app={this.app}
