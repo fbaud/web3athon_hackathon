@@ -87,9 +87,10 @@ var Module = class {
 		
 		var contracts = ethnodemodule.getContractsObject(session);
 		
-		// register CreditBook in the contracts global object
+		// register CreditBook & ERC20Credit in the contracts global object
 		// (could be transfered to preFinalizeGlobalScopeInit_hook if necessary)
 		contracts.registerContractClass('CreditBook', this.CreditBook);
+		contracts.registerContractClass('ERC20Credit', this.ERC20Credit);
 		
 		// force refresh of list
 		ethnodemodule.getContractsObject(session, true);
@@ -152,9 +153,9 @@ var Module = class {
 
 		var address = (data && data['address'] ? data['address'] : null);
 
-		var creditbook = (data && data['creditbook'] ? data['creditbook'] : null);
+		var owner = (data && data['owner'] ? data['owner'] : null);
 		
-		var description = (data && data['description'] ? data['description'] : null);
+		var token = (data && data['token'] ? data['token'] : null);
 
 
 		var ethnodemodule = global.getModuleObject('ethnode');
@@ -166,9 +167,9 @@ var Module = class {
 		
 		contract.setAddress(address);
 
-		contract.setLocalCreditBook(creditbook);
+		contract.setLocalOwner(owner);
 
-		contract.setLocalDescription(description);
+		contract.setLocalToken(token);
 		
 		return contract;	
 	}

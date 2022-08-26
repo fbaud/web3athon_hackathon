@@ -3,8 +3,6 @@ import { connect } from 'react-redux';
 
 import PropTypes from 'prop-types';
 
-import { Button, FormGroup, FormControl, FormLabel } from 'react-bootstrap';
-
 //import {Header} from '@primusmoney/react_pwa';
 import {Header} from '../nodemodules/@primusmoney/react_pwa';
 

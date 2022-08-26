@@ -241,14 +241,12 @@ class CreditBookView extends React.Component {
 				</FormGroup>
 				<FormGroup controlId="client_address">
 					<FormLabel>Client Address</FormLabel>
-					<InputGroup>
-						<FormControl 
+					<FormControl 
 							autoFocus
 							type="text"
-							value={client_address}
+							value={(client_address ? client_address : '')}
 							onChange={e => this.setState({client_address: e.target.value})}
 						/>
-					</InputGroup>
 				</FormGroup>
 
 				<Button onClick={this.onSubmit.bind(this)} type="submit">

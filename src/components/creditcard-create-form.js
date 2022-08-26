@@ -1,17 +1,14 @@
-import React from 'react'
+import React, { Component } from 'react';
 import { connect } from 'react-redux';
-import { Button, Dropdown, DropdownButton, FormGroup, FormControl, FormLabel, InputGroup } from 'react-bootstrap';
+import { Button, Dropdown, DropdownButton, FormGroup, FormControl, FormLabel, InputGroup} from 'react-bootstrap';
 
 import PropTypes from 'prop-types';
-
-import { Dots } from 'react-activity';
-import 'react-activity/dist/react-activity.css';
 
 //import {CurrencyCardIcon} from '@primusmoney/react_pwa';
 import {CurrencyCardIcon} from '../nodemodules/@primusmoney/react_pwa';
 
-
-class CreditBookCreateForm extends React.Component {
+class CreditCardCreateForm extends React.Component {
+	
 	constructor(props) {
 		super(props);
 		
@@ -19,25 +16,33 @@ class CreditBookCreateForm extends React.Component {
 
 		this.getMvcMyPWAObject = this.app.getMvcMyPWAObject;
 		this.getMvcMyCreditBookObject = this.app.getMvcMyCreditBookObject;
-		
-		let title = '';
+
+		this.uuid = this.app.guid();
+
+		this.closing = false;
+
+
 		let currency = {symbol: ''};
 		let currencies= [];
 		let signingkey = null;
 		let currentcard = null;
 		let balance = '';
+
+		let credittoken_address = null;
+
+		let new_limit = null;
+		
 		
 		this.state = {
-			title,
-			currency,
-			currencies,
-			signingkey,
-			currentcard,
-			balance,
-			message_text: '',
-			processinginfo: 'processing submission',
-			processing: false
-		};	
+				currency,
+				currencies,
+				signingkey,
+				currentcard,
+				balance,
+				credittoken_address,
+				message_text: 'loading...',
+				processing: false
+		}
 	}
 
 	_setState(state) {
@@ -46,9 +51,10 @@ class CreditBookCreateForm extends React.Component {
 	}
 
 
+	
 	// post render commit phase
 	componentDidUpdate(prevProps, prevState) {
-		//console.log('CreditBookCreateForm.componentDidUpdate called');
+		//console.log('CreditCardCreateForm.componentDidUpdate called');
 		
 		let mvcmypwa = this.getMvcMyPWAObject();
 
@@ -114,70 +120,57 @@ class CreditBookCreateForm extends React.Component {
 
 		}
 	}
-
+	
 	componentDidMount() {
-		console.log('CreditBookCreateForm.componentDidMount called');
+		console.log('CreditCardCreateForm.componentDidMount called');
 		
 		let mvcmypwa = this.getMvcMyPWAObject();
-		
-		let rootsessionuuid = this.props.rootsessionuuid;
-		let walletuuid = this.props.currentwalletuuid;
 
-		// list of currencies
-		this.mvcmypwa.getCurrencies(rootsessionuuid, walletuuid)
-		.then((currencies) => {
-			this._setState({currencies});
-		})
-		.catch(err => {
-			console.log('error in CreditBookCreateForm.componentDidMount ' + err);
-		});
-
-
-		// message translated in user's language
 		let message_text = mvcmypwa.t(
-		'When you press the button \'Create Book\', a credit book will be created \
-		for the currency card that have been selected and deployed on the blockchain \
-		You will then be able to grant credit to specific addresses corresponding to \
-		customers that you trust. They will be able to pay you either in the original \
-		currency or use the balance they have on their credit allowance.');
+			'You can raise or lower credit for this account. \
+			 The balance will be adapted accordingly. \
+             Note that if lowering the credit limit to zero \
+			 corresponds to closing the account.');
+	
+		
+		this.setState({message_text});
 
-		this._setState({message_text});
-
-		this.checkNavigationState().catch(err => {console.log('error in checkNavigationState: ' + err);});
+		this.checkNavigationState().catch(err => {console.log('error in CreditCardCreateForm.checkNavigationState: ' + err);});
 	}
 
 	async checkNavigationState() {
 		let mvcmypwa = this.getMvcMyPWAObject();
-		
+		let mvcmycreditbook = this.getMvcMyCreditBookObject();
+
 		let rootsessionuuid = this.props.rootsessionuuid;
 		let walletuuid = this.props.currentwalletuuid;
 
 		let app_nav_state = this.app.getNavigationState();
 		let app_nav_target = app_nav_state.target;
 
+		// check wallet is unlocked
+			let unlocked = await this.app.checkWalletUnlocked()
+			.catch(err => {
+			});
 
- 		// check wallet is unlocked
-		 let unlocked = await this.app.checkWalletUnlocked()
-		 .catch(err => {
-		 });
-
-		 if (!unlocked) {
+			if (!unlocked) {
 			let params = (app_nav_target ? app_nav_target.params : null);
 			this.app.gotoRoute('login', params);
 			return;
-		 }
-		 else {
+			}
+			else {
 			// check it is not the device wallet, because we need a safer wallet
 			let isdevicewallet = await this.app.isDeviceWallet();
 			
 			if (isdevicewallet) {
 				await this.app.resetWallet();
 				
-			   let params = (app_nav_target ? app_nav_target.params : null);
-			   this.app.gotoRoute('login', params);
-			   return;
-			 }
+				let params = (app_nav_target ? app_nav_target.params : null);
+				this.app.gotoRoute('login', params);
+				return;
+				}
 		}
+		
 
 		// list of currencies
 		var currencies = await this.mvcmypwa.getCurrencies(rootsessionuuid, walletuuid)
@@ -191,22 +184,24 @@ class CreditBookCreateForm extends React.Component {
 
 		this._setState({currencies: enabled_currencies});
 		
-		if (app_nav_target && (app_nav_target.route == 'creditbook') && (app_nav_target.reached == false)) {
+
+		if (app_nav_target && (app_nav_target.route == 'creditcard') && (app_nav_target.reached == false)) {
+
 			// mark target as reached
 			app_nav_target.reached = true;
 		}
-
-	 }
+	}
 
 	// end of life
 	componentWillUnmount() {
-		console.log('CreditBookCreateForm.componentWillUnmount called');
+		console.log('CreditCardCreateForm.componentWillUnmount called');
 		
 		this.closing = true;
 	}
 
+
 	
-	// user actions	
+	// user actions
 	async onSubmit() {
 		console.log('onSubmit pressed!');
 
@@ -220,118 +215,31 @@ class CreditBookCreateForm extends React.Component {
 		let carduuid;
 		let card;
 
-
 		this._setState({processing: true});
 
 		try {
-			let { currency, currentcard, signingkey, title } = this.state;
-
-	
-			if (!title || (title.length == 0)) {
-				this.app.alert('You need to enter a title for this credit book');
-				this._setState({processing: false});
-				return;
-			}
-	
-	
-			if (!currency || !currency.uuid) {
-				this.app.alert('You need to specify a valid currency');
-				this._setState({processing: false});
-				return;
-			}
-	
-			// get wallet details
-			wallet = await mvcmypwa.getWalletInfo(rootsessionuuid, walletuuid);
-	
-			if (currentcard) {
-				card = currentcard;
-				carduuid = card.uuid;
-			}
-			else {
-				if (signingkey) {
-					let currencyuuid = currency.uuid;
-		
-					card = await this.app.createCurrencyCard(currencyuuid, signingkey, {maincard: true})
-					.catch(err => {
-						console.log('error in DeedCreateForm.onSubmit: ' + err);
-					});
-	
-					if (!card) {
-						this.app.alert('Could not create card from private key');
-						this._setState({processing: false});
-						return;
-					}
-				}
-				else {
-					this.app.alert('You need to provide your private key for ' + currency.name + ' in order to create a credit book');
-					this._setState({processing: false});
-					return;
-				}
-		
-			}
-
-			// check card can transfer credit units and tokens
-			let _privkey = await  mvcmypwa.getCardPrivateKey(rootsessionuuid, walletuuid, currentcard.uuid).catch(err => {});
-			let cansign = (_privkey ? true : false);
-
-			if (cansign !== true) {
-				this.app.alert('Current card for the currency is read-only');
-				this._setState({processing: false});
-				return;
-			}
-	
-			// credit book
-			let creditbook = {owner: currentcard.address, currencytoken: currency.address, title};
-			
-			let currencyuuid = currency.uuid;
-
-			// for persistence
-			creditbook.uuid = this.app.guid();
-			creditbook.currencyuuid = currencyuuid;
-			creditbook.carduuid = card.uuid;
-
-			// check we have enough transaction credits
-			let tx_fee = {};
-			tx_fee.transferred_credit_units = 0;
-			let deploy_cost_units = 350;
-			tx_fee.estimated_cost_units = deploy_cost_units;
-
-			// need a higher feelevel than standard this.app.getCurrencyFeeLevel(currencyuuuid)
-			let _feelevel = await mvcmypwa.getRecommendedFeeLevel(rootsessionuuid, walletuuid, card.uuid, tx_fee);
-
-			var canspend = await mvcmypwa.canCompleteTransaction(rootsessionuuid, walletuuid, card.uuid, tx_fee, _feelevel).catch(err => {});
-	
-			if (!canspend) {
-				if (tx_fee.estimated_fee.execution_credits > tx_fee.estimated_fee.max_credits) {
-					this.app.alert('The execution of this transaction is too large: ' + tx_fee.estimated_fee.execution_units + ' credit units.');
-					this._setState({processing: false});
-					return;
-				}
-				else {
-					this.app.alert('You must add transaction units to the source card. You need at least ' + tx_fee.required_units + ' credit units.');
-					this._setState({processing: false});
-					return;
-				}
-			}
-			
-			// deploy
-			creditbook = await mvcmycreditbook.deployCreditBook(rootsessionuuid, walletuuid, currencyuuid, carduuid, creditbook, _feelevel)
-			.catch(err => {
-				console.log('error in CreditBookCreateForm.onSubmit: ' + err);
-			});
-
-			// save
-			await mvcmycreditbook.saveCreditBook(rootsessionuuid, walletuuid, creditbook)			
-			.catch(err => {
-				console.log('error in CreditBookCreateForm.onSubmit: ' + err);
-			});
+			let {currentcard, currency, credittoken_address} = this.state;
 
 
-			// go to list view (to let time for the blockchain to commit the transactions)
-			let params = {action: 'view', currencyuuid: currency.uuid, cardaddress: currentcard.address};
+			// fetch erc20 credit
+			let erc20credit = await mvcmycreditbook.fetchCreditToken(rootsessionuuid, walletuuid, currency.uuid, credittoken_address);
+
+			// save credit card locally
+			let creditcard = {};
+			creditcard.uuid = this.app.guid();
+			creditcard.currencyuuid = currency.uuid;
+			creditcard.carduuid = currentcard.uuid;
+			creditcard.credittotken = credittoken_address;
+
+			await mvcmycreditbook.saveCreditCard(rootsessionuuid, walletuuid, creditcard);
+
+
+			// goto credit card list to let time for new account to be updated
+			let params = {action: 'view'};
+
+			this.app.gotoRoute('creditcards', params);
 	
-			await this.app.gotoRoute('creditbooks', params);
-	
+
 			this._setState({processing: false});
 	
 			return true;
@@ -340,10 +248,13 @@ class CreditBookCreateForm extends React.Component {
 			console.log('exception in onSubmit: ' + e);
 			this.app.error('exception in onSubmit: ' + e);
 
-			this.app.alert('could not create credit book');
+			this.app.alert('could not associate credit facility');
 
 			this._setState({processing: false});
 		}
+
+
+		return false;
 	}
 
 	async onChangeCurrency(e) {
@@ -384,7 +295,7 @@ class CreditBookCreateForm extends React.Component {
 		let params = {currencyuuid: currency.uuid};
 		this.app.gotoRoute('currencycard', params);
 	}
-
+	
 	// rendering
 	renderMainCardPart() {
 		let { currency, currentcard, signingkey, balance } = this.state;
@@ -460,67 +371,59 @@ class CreditBookCreateForm extends React.Component {
 		  );
 	}
 
-	
-	renderCreditBookCreateForm() {
-		let { title, currencies, currency, currentcard, message_text } = this.state;
+
+	renderCreditCardCreateForm() {
+		let { credittoken_address, message_text} = this.state;
 		
 		return (
 			<div className="Form">
-			  <div>
-				<FormGroup controlId="title">
-				  <FormLabel>Credit Book Title</FormLabel>
-				  <FormControl
-					autoFocus
-					type="text"
-					value={title}
-					onChange={e => this._setState({title: e.target.value})}
-				  />
+				<FormGroup controlId="credittoken_address">
+					<FormLabel>Credit token</FormLabel>
+					<FormControl
+							autoFocus
+							type="text"
+							value={(credittoken_address ? credittoken_address : '')}
+							onChange={e => this.setState({credittoken_address: e.target.value})}
+						/>
 				</FormGroup>
-				
-				<Button 
-				disabled={(currentcard ? false : true)}
-				onClick={this.onSubmit.bind(this)} 
-				type="submit">
-				  Create Book
+
+
+				<Button onClick={this.onSubmit.bind(this)} type="submit">
+				 Register credit facility
 				</Button>
+
 
 				<div className="TextBox">
 				  {message_text}
 			  	</div>
 
-			  </div>
+				
+			</div>
+		  );
+	}
+
+
+
+	render() {
+		return (
+			<div className="Container">
+				<div className="Title">Associate Credit Facility</div>
+				{ this.renderCurrencyPickForm()}
+				<div className="Separator">&nbsp;</div>
+				{ this.renderCreditCardCreateForm()}
 			</div>
 		  );
 	}
 	
-	render() {
-		let {processing} = this.state; 
-		
-		if (processing === true) {
-			return (
-				<div className="Splash">
-					<div>{this.state.processinginfo}</div>
-					<Dots />
-				</div>
-			);
-		}
-		
-		return (
-			<div className="Container">
-				<div className="Title">Create Credit Book</div>
-				{ this.renderCurrencyPickForm()}
-				{ this.renderCreditBookCreateForm()}
-			</div>
-		  );
-	}
 }
 
 
 // propTypes validation
-CreditBookCreateForm.propTypes = {
+CreditCardCreateForm.propTypes = {
 	app: PropTypes.object.isRequired,
 	rootsessionuuid: PropTypes.string,
 	currentwalletuuid: PropTypes.string,
+	iswalletlocked: PropTypes.bool,
 };
 
 //redux
@@ -531,7 +434,7 @@ const mapStateToProps = (state) => {
 		success: state.login.success,
 		lasterror: state.login.error,
 		currentwalletuuid: state.wallets.walletuuid,
-		currentcarduuid: state.cards.carduuid,
+		iswalletlocked: state.wallets.islocked,
 	};
 }
 
@@ -541,6 +444,6 @@ const mapDispatchToProps = (dispatch) => {
 }
 
 
-export {CreditBookCreateForm};
-export default connect(mapStateToProps, mapDispatchToProps)(CreditBookCreateForm);
+export {CreditCardCreateForm};
+export default connect(mapStateToProps, mapDispatchToProps)(CreditCardCreateForm);
 

@@ -3,12 +3,10 @@ import { connect } from 'react-redux';
 
 import PropTypes from 'prop-types';
 
-import { Button, FormGroup, FormControl, FormLabel } from 'react-bootstrap';
-
 //import {Header} from '@primusmoney/react_pwa';
 import {Header} from '../nodemodules/@primusmoney/react_pwa';
 
-
+import CreditCardListView from '../components/creditcard-list-view.js';
 
 class CreditCardListScreen extends React.Component {
 	
@@ -16,78 +14,64 @@ class CreditCardListScreen extends React.Component {
 		super(props);
 		
 		this.app = this.props.app;
-		this.getMvcModuleObject = this.app.getMvcModuleObject;
+
+		this.getMvcMyPWAObject = this.app.getMvcMyPWAObject;
+		this.getMvcMyCreditBookObject = this.app.getMvcMyCreditBookObject;
 
 		this.state = {
-			url: ''
+			loaded: false,
+			lineinfo: 'loading...'
 		};		
 	}
 	
 	componentDidMount(prevProps) {
 		console.log('CreditCardListScreen.componentDidMount called');
+		
+		this.checkNavigationState().catch(err => {console.log('error in checkNavigationState: ' + err);});
+	
+	}
 
-		let app_nav_state = this.app.getNavigationState();
-		let app_nav_target = app_nav_state.target;
+	async checkNavigationState() {
+		this.checking = true;
 
-		if (app_nav_target && (app_nav_target.route == 'deeplink') && (app_nav_target.reached == false)) {
-			// we want to login before completing previous route
-			let params = app_nav_target.params;
+		try {
+			let mvcmycreditbook = this.getMvcMyCreditBookObject();
 
-			if (params && params.url) {
-				this.setState({url: params.url});
-			}
+			let rootsessionuuid = this.props.rootsessionuuid;
+			let walletuuid = this.props.currentwalletuuid;
+	
+			let app_nav_state = this.app.getNavigationState();
+			let app_nav_target = app_nav_state.target;
 
-			app_nav_target.reached = true;
-	   }
-	   else {
-			// direct call from browser
-			let app_start_conditions = this.app.getVariable('start_conditions');
-			let urlParams = app_start_conditions.urlParams;
+			let creditbook_list = await mvcmycreditbook.readCreditBooks(rootsessionuuid, walletuuid);
 
-			let _url;
-			let _encodedurl = urlParams.get('linkurl');
-
-			if (_encodedurl) {
-				if (_encodedurl.startsWith('b64_'))
-					_url = this.app.decodebase64(_encodedurl.substring(4));
-				else if (_encodedurl.startsWith('hex_'))
-					_url = this.app.decodehex(_encodedurl.substring(4));
-
-				this.setState({url: _url});
-			}
-
-	   }
+			console.log('');
+	
+		}
+		catch(e) {
+			console.log('exception in CreditCardListScreen.checkNavigationState: '+ e);
+		}
+		finally {
+			this.checking = false;
+		}
+		this.setState({loaded: true});
+	}
+	
+	// end of life
+	componentWillUnmount() {
+		console.log('CreditCardListScreen.componentWillUnmount called');
+		let app = this.app;
+		let mvcmycreditbook = this.getMvcMyCreditBookObject();
 		
 	}
 	
-	async onGotoLink() {
-		console.log('CreditCardListScreen.onGotoLink pressed!');
-
-		let {url} = this.state;
- 
-		await this.app.gotoUrl(url);
-	}
-
 	renderScreen() {
-		let {url} = this.state;
+		let {lineinfo} = this.state;
 
 		return (
 			<div className="Container">
-				<div className="Instructions">List of credit cards.</div>
-				<div className="Form">
-					<FormGroup controlId="url">
-					<FormLabel>Url</FormLabel>
-					<FormControl
-						autoFocus
-						type="text"
-						value={url}
-						onChange={e => this.setState({url: e.target.value})}
-					/>
-					</FormGroup>
-					<Button onClick={this.onGotoLink.bind(this)} type="submit">
-						Go
-					</Button>
-				</div>
+				<div className="Instructions">List of credit cards</div>
+				<CreditCardListView {...this.props} app = {this.app} parent={this} />
 			</div>
 		);		
 	}
@@ -111,12 +95,16 @@ class CreditCardListScreen extends React.Component {
 
 // propTypes validation
 CreditCardListScreen.propTypes = {
-	app: PropTypes.object.isRequired
+	app: PropTypes.object.isRequired,
+	rootsessionuuid: PropTypes.string,
+	currentwalletuuid: PropTypes.string,
 };
 
 //redux
 const mapStateToProps = (state) => {
 	return {
+		rootsessionuuid: state.session.sessionuuid,
+		currentwalletuuid: state.wallets.walletuuid,
 	};
 } 
 

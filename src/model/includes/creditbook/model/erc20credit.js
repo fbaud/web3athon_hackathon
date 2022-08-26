@@ -17,15 +17,7 @@ var SmartContractClass = _GlobalClass.getGlobalObject().getModuleClass('common',
 var ERC20Credit = class extends SmartContractClass {
 	
 	constructor(session, contractaddress, web3providerurl) {
-		this.session = session;
-		this.address = contractaddress;
-		
-		this.web3providerurl = web3providerurl;
-
-		this.contractpath = './contracts/creditbook/ERC20Credit.json';
-		
-		// operating variables
-		this.contractinstance = null;
+		super(session, contractaddress, web3providerurl);
 
 		// local data
 		this.creditbook = null;
@@ -94,9 +86,9 @@ var ERC20Credit = class extends SmartContractClass {
 		
 		var status = this.getStatus();
 		
-		var creditbook = this.getLocalCreditBook();
+		var owner = this.getLocalOwner();
 		
-		var description = this.getLocalDescription();
+		var token = this.getLocalToken();
 		
 		var creationdate = this.getLocalCreationDate();
 		var submissiondate = this.getLocalSubmissionDate();
@@ -104,9 +96,8 @@ var ERC20Credit = class extends SmartContractClass {
 		
 		var json = {uuid: uuid, address: address, contracttype: contracttype, status: status, 
 				web3providerurl: web3providerurl, chainid: chainid, networkid: networkid, 
-				creditbook: creditbook,
-				creationdate: creationdate, submissiondate: submissiondate,
-				description: description};
+				owner: owner, token: token,
+				creationdate: creationdate, submissiondate: submissiondate};
 		
 		return json;
 	}
@@ -145,19 +136,29 @@ var ERC20Credit = class extends SmartContractClass {
 		this.contractinstance = null;
 	}
 	
-	getContractInstance() {
-		if (this.contractinstance)
-			return this.contractinstance;
+	getContractInterface() {
+		if (this.contractinterface)
+			return this.contractinterface;
 		
 		var session = this.session;
+		var contractaddress = this.address;
+		var web3providerurl = this.web3providerurl;
+		
 		var global = session.getGlobalObject();
-		var ethnodemodule = global.getModuleObject('ethnode');
+		var creditbookmodule = global.getModuleObject('creditbook');
+		
+		this.contractinterface = new creditbookmodule.ERC20CreditContractInterface(session, contractaddress);
 
-		var contractpath = this.getContractPath();
+		if (this.web3providerurl)
+		this.contractinterface.setWeb3ProviderUrl(this.web3providerurl);
+
+		if (this.chainid)
+		this.contractinterface.setChainId(this.chainid);
 		
-		this.contractinstance = ethnodemodule.getContractInstance(session, this.address, contractpath, this.web3providerurl);
+		if (this.networkid)
+		this.contractinterface.setNetworkId(this.networkid);
 		
-		return this.contractinstance;
+		return this.contractinterface;
 	}
 
 	async getChainCreditBook() {
