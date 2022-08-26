@@ -210,8 +210,43 @@ var CreditBookContractInterface = class {
 		return contractinstance.method_call("accounts", params, callback);
 	}
 	
+	// client info
+	creditlimitOf(client_address, callback) {
+		var self = this;
+		var session = this.session;
+		
+		var contractinstance = this.getContractInstance();
+		var params = [];
 
+		params.push(client_address);
+		
+		return contractinstance.method_call("creditlimitOf", params, callback);
+	}
 	
+	balanceOf(client_address, callback) {
+		var self = this;
+		var session = this.session;
+		
+		var contractinstance = this.getContractInstance();
+		var params = [];
+		
+		params.push(client_address);
+		
+		return contractinstance.method_call("balanceOf", params, callback);
+	}
+
+	creditToken(client_address, callback) {
+		var self = this;
+		var session = this.session;
+		
+		var contractinstance = this.getContractInstance();
+		var params = [];
+		
+		params.push(client_address);
+		
+		return contractinstance.method_call("creditToken", params, callback);
+	}
+
 	// transactions
 	setTitle(newtitle, ethtx, callback) {
 		var self = this;

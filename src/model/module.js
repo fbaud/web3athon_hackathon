@@ -626,6 +626,49 @@ var Module = class {
 
 		return accounts;
 	}
+
+	async _findCreditAccount(sessionuuid, walletuuid, carduuid, creditbookuuid, client_addr) {
+		var global = this.global;
+		var _apicontrollers = this._getClientAPI();
+		var mvcpwa = this._getMvcPWAObject();
+
+		let accounts = await this.fetchCreditAccounts(sessionuuid, walletuuid, carduuid, creditbookuuid);
+
+		for (var i = 0; i < (accounts ? accounts.length : 0); i++) {
+			let are_equal = await mvcpwa.areAddressesEqual(sessionuuid, accounts[i].address, client_addr);
+			if (are_equal)
+				return accounts[i];
+		}
+	}
+
+	async fetchCreditAccount(sessionuuid, walletuuid, carduuid, creditbookuuid, client_addr) {
+		if (!sessionuuid)
+		return Promise.reject('session uuid is undefined');
+	
+		if (!walletuuid)
+			return Promise.reject('wallet uuid is undefined');
+
+		if (!carduuid)
+			return Promise.reject('card uuid is undefined');
+		
+		if (!creditbookuuid)
+			return Promise.reject('credit book uuid is undefined');
+
+		// get local account info
+		let accountinfo = await this._findCreditAccount(sessionuuid, walletuuid, carduuid, creditbookuuid, client_addr);
+		let accountname = (accountinfo ? accountinfo.name : 'unknown');
+
+		// get credit book on chain
+		let creditbookobj = await this._getCreditBookObject(sessionuuid, walletuuid, carduuid, creditbookuuid);
+
+		let account = {address: client_addr, name: accountname};
+		account.limit = await creditbookobj.creditlimitOf(client_addr);
+		account.balance = await creditbookobj.balanceOf(client_addr);
+		account.credittoken = await creditbookobj.creditToken(client_addr);
+
+		return account;
+	}
+
 }
 
 

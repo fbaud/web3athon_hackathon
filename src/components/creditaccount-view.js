@@ -4,9 +4,8 @@ import { Button,  FormGroup, FormControl, FormLabel, InputGroup, Table} from 're
 
 import PropTypes from 'prop-types';
 
-import CreditAccountListView from '../components/creditaccount-list-view.js';
 
-class CreditBookView extends React.Component {
+class CreditAccountView extends React.Component {
 	
 	constructor(props) {
 		super(props);
@@ -56,21 +55,22 @@ class CreditBookView extends React.Component {
 	
 	// post render commit phase
 	componentDidMount() {
-		console.log('CreditBookView.componentDidMount called');
+		console.log('CreditAccountView.componentDidMount called');
 		
 		let mvcmypwa = this.getMvcMyPWAObject();
 
 		let registration_text = mvcmypwa.t('This quote has been registered.');
 
 		let message_text = mvcmypwa.t(
-			'You can add credit lines on this book. \
-			 Each credit line will let your client choose \
-             to pay cash with a currency card or use \
-             their credit if the balance allows it.');
+			'You can raise or lower credit for this account. \
+			 The balance will be adapted accordingly. \
+             Note that if lowering the credit limit to zero \
+			 corresponds to closing the account.');
 	
+		
 		this.setState({registration_text, message_text});
 
-		this.checkNavigationState().catch(err => {console.log('error in CreditBookView.checkNavigationState: ' + err);});
+		this.checkNavigationState().catch(err => {console.log('error in CreditAccountView.checkNavigationState: ' + err);});
 	}
 
 	async checkNavigationState() {
@@ -83,11 +83,12 @@ class CreditBookView extends React.Component {
 		let app_nav_state = this.app.getNavigationState();
 		let app_nav_target = app_nav_state.target;
 
-		if (app_nav_target && (app_nav_target.route == 'creditbook') && (app_nav_target.reached == false)) {
+		if (app_nav_target && (app_nav_target.route == 'creditaccount') && (app_nav_target.reached == false)) {
 			var params = app_nav_target.params;
 			var creditbookuuid = params.creditbookuuid;
+			var client_addr = params.client_addr;
 
-			if (creditbookuuid) {
+			if (creditbookuuid && client_addr) {
 				let creditbook = await mvcmycreditbook.readCreditBook(rootsessionuuid, walletuuid, creditbookuuid).catch(err => {});
 
 				if (creditbook) {
@@ -103,13 +104,18 @@ class CreditBookView extends React.Component {
 					let currencyuuid = creditbook.currencyuuid;
 					let currency = await mvcmypwa.getCurrencyFromUUID(rootsessionuuid, currencyuuid)
 					.catch(err => {
-						console.log('error in CreditBookView.checkNavigationState: ' + err);
+						console.log('error in CreditAccountView.checkNavigationState: ' + err);
 					});
 
 					// current card
 					let maincurrencycard = await mvcmypwa.getCurrencyCard(rootsessionuuid, walletuuid, currencyuuid).catch(err=>{});
 
-					this.setState({creditbookuuid, currency, title, currentcard: maincurrencycard, accounts});
+					// retrieve account
+					let account = await mvcmycreditbook.fetchCreditAccount(rootsessionuuid, walletuuid, carduuid, creditbookuuid, client_addr).catch(err=>{});
+					let client_name = (account && account.name ? account.name : 'unknown');
+					let client_address = (account && account.address ? account.address : 'unknown');
+
+					this.setState({creditbookuuid, currency, title, currentcard: maincurrencycard, accounts, client_name, client_address, account});
 				}
 			}
 
@@ -121,7 +127,7 @@ class CreditBookView extends React.Component {
 
 	// end of life
 	componentWillUnmount() {
-		console.log('CreditBookView.componentWillUnmount called');
+		console.log('CreditAccountView.componentWillUnmount called');
 		
 		this.closing = true;
 	}
@@ -199,7 +205,7 @@ class CreditBookView extends React.Component {
 
 			let txhash = await mvcmycreditbook.createCreditAccount(rootsessionuuid, walletuuid, carduuid, creditbookuuid, accountdata, client_address, _feelevel)
 			.catch(err => {
-				console.log('error in CreditBookView.onSubmit: ' + err);
+				console.log('error in CreditAccountView.onSubmit: ' + err);
 			});
 	
 			// goto new account
@@ -225,38 +231,57 @@ class CreditBookView extends React.Component {
 
 	
 	// rendering
-	renderAccountCreateForm() {
+	renderAccountUpdateForm() {
 		let { client_name, client_address} = this.state;
 
+		return (
+			<div className="Form">
+
+				<Button onClick={this.onSubmit.bind(this)} type="submit">
+				 Update credit account
+				</Button>
+
+			</div>
+		  );
+	}
+
+	renderCreditAccountView() {
+		let { client_name, client_address, message_text} = this.state;
+		
 		return (
 			<div className="Form">
 				<FormGroup controlId="client_name">
 					<FormLabel>Client Name</FormLabel>
 					<InputGroup>
-						<FormControl 
+						<FormControl
+							disabled
 							autoFocus
 							type="text"
 							value={client_name}
-							onChange={e => this.setState({client_name: e.target.value})}
 						/>
 					</InputGroup>
 				</FormGroup>
 				<FormGroup controlId="client_address">
 					<FormLabel>Client Address</FormLabel>
 					<InputGroup>
-						<FormControl 
+						<FormControl
+							disabled
 							autoFocus
 							type="text"
 							value={client_address}
-							onChange={e => this.setState({client_address: e.target.value})}
 						/>
 					</InputGroup>
 				</FormGroup>
 
-				<Button onClick={this.onSubmit.bind(this)} type="submit">
-				 Create an account
-				</Button>
+				<div className="Separator">&nbsp;</div>
 
+				{this.renderAccountUpdateForm()}
+
+				<div className="TextBox">
+				  {message_text}
+			  	</div>
+
+				
 			</div>
 		  );
 	}
@@ -287,34 +312,17 @@ class CreditBookView extends React.Component {
 							onChange={e => this.onChangeCurrency(e)}
 						/>
 				</FormGroup>
-
-				<div className="Separator">&nbsp;</div>
-
-				{this.renderAccountCreateForm()}
-
-				<div className="TextBox">
-				  {message_text}
-			  	</div>
-
-				
 			</div>
 		  );
 	}
 
-	renderAccountList() {
-		let {creditbookuuid} = this.state;
-		return (
-			<CreditAccountListView app = {this.app}  parent={this} creditbookuuid={creditbookuuid}/>
-		);
-    }
-
 	render() {
 		return (
 			<div className="Container">
-				<div className="Title">Credit Book View</div>
+				<div className="Title">Credit Account View</div>
 				{ this.renderCreditBookView()}
 				<div className="Separator">&nbsp;</div>
-				{ this.renderAccountList()}
+				{ this.renderCreditAccountView()}
 			</div>
 		  );
 	}
@@ -323,7 +331,7 @@ class CreditBookView extends React.Component {
 
 
 // propTypes validation
-CreditBookView.propTypes = {
+CreditAccountView.propTypes = {
 	app: PropTypes.object.isRequired,
 	rootsessionuuid: PropTypes.string,
 	currentwalletuuid: PropTypes.string,
@@ -348,6 +356,6 @@ const mapDispatchToProps = (dispatch) => {
 }
 
 
-export {CreditBookView};
-export default connect(mapStateToProps, mapDispatchToProps)(CreditBookView);
+export {CreditAccountView};
+export default connect(mapStateToProps, mapDispatchToProps)(CreditAccountView);
 

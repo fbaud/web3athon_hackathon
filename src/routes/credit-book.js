@@ -1,6 +1,8 @@
 import CreditBookListScreen from '../screens/creditbook-list-screen.js';
 import CreditBookScreen from '../screens/creditbook-home.js';
 
+import CreditAccountScreen from '../screens/creditaccount-home.js';
+
 import GrantCreditScreen from '../screens/grant-credit-screen.js';
 import BillScreen from '../screens/bill-screen.js';
 
@@ -25,12 +27,17 @@ class Routes {
 				screen: CreditBookScreen
 			},
 			{
-				name: 'creditbook grant',
+				name: 'creditaccount',
+				path: '/creditaccount',
+				screen: CreditAccountScreen
+			},
+			{
+				name: 'creditbookgrant',
 				path: '/creditbook_grant',
 				screen: GrantCreditScreen
 			},
 			{
-				name: 'creditbook bill',
+				name: 'creditbookbill',
 				path: '/creditbook_bill',
 				screen: BillScreen
 			},
@@ -45,12 +52,12 @@ class Routes {
 				screen: CreditCardScreen
 			},
 			{
-				name: 'creditbook request',
+				name: 'creditbookrequest',
 				path: '/creditbook_request',
 				screen: RequestCreditScreen
 			},
 			{
-				name: 'creditbook pay',
+				name: 'creditbookpay',
 				path: '/creditbook_pay',
 				screen: PayScreen
 			}

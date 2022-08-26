@@ -73,7 +73,7 @@ class CreditBookListScreen extends React.Component {
 		return (
 			<div className="Container">
 				<div className="Instructions">List of credit books</div>
-				<CreditBookListView {...this.props} app = {this.app} 	parent={this} />
+				<CreditBookListView {...this.props} app = {this.app} parent={this} />
 			</div>
 		);		
 	}

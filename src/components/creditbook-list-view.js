@@ -142,7 +142,7 @@ class CreditBookListView extends React.Component {
 				<tbody className="ListItem" >
 				{(items && items.length ?
 				items.map((item, index) => {return (this.renderItem(item));})
-				: <tr className="NoList">No credit book in the list</tr>
+				: <tr className="NoList"><td>No credit book in the list</td></tr>
 				)}
 				</tbody>
 			</Table>
