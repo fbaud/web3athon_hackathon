@@ -60,15 +60,13 @@ class CreditBookView extends React.Component {
 		
 		let mvcmypwa = this.getMvcMyPWAObject();
 
-		let registration_text = mvcmypwa.t('This quote has been registered.');
-
 		let message_text = mvcmypwa.t(
 			'You can add credit lines on this book. \
 			 Each credit line will let your client choose \
              to pay cash with a currency card or use \
              their credit if the balance allows it.');
 	
-		this.setState({registration_text, message_text});
+		this.setState({message_text});
 
 		this.checkNavigationState().catch(err => {console.log('error in CreditBookView.checkNavigationState: ' + err);});
 	}

@@ -4,6 +4,8 @@ import { Button,  FormGroup, FormControl, FormLabel, InputGroup, Table} from 're
 
 import PropTypes from 'prop-types';
 
+//import {TextCopyIcon} from '@primusmoney/react_pwa';
+import {TextCopyIcon} from '../nodemodules/@primusmoney/react_pwa';
 
 class CreditAccountView extends React.Component {
 	
@@ -32,6 +34,15 @@ class CreditAccountView extends React.Component {
 		let accounts = [];
 
 		let currentcard = null;
+
+		let account = null;
+
+		let limit_string = null;
+		let balance_string = null;
+		let credittoken_address = null;
+
+		let new_limit = null;
+		
 		
 		this.state = {
 				creditbookuuid,
@@ -41,6 +52,11 @@ class CreditAccountView extends React.Component {
  				client_address,
                 accounts,
 				currentcard,
+				account,
+				limit_string,
+				balance_string,
+				credittoken_address,
+				new_limit,
 				message_text: 'loading...',
 				processing: false
 		}
@@ -59,8 +75,6 @@ class CreditAccountView extends React.Component {
 		
 		let mvcmypwa = this.getMvcMyPWAObject();
 
-		let registration_text = mvcmypwa.t('This quote has been registered.');
-
 		let message_text = mvcmypwa.t(
 			'You can raise or lower credit for this account. \
 			 The balance will be adapted accordingly. \
@@ -68,7 +82,7 @@ class CreditAccountView extends React.Component {
 			 corresponds to closing the account.');
 	
 		
-		this.setState({registration_text, message_text});
+		this.setState({message_text});
 
 		this.checkNavigationState().catch(err => {console.log('error in CreditAccountView.checkNavigationState: ' + err);});
 	}
@@ -115,7 +129,19 @@ class CreditAccountView extends React.Component {
 					let client_name = (account && account.name ? account.name : 'unknown');
 					let client_address = (account && account.address ? account.address : 'unknown');
 
-					this.setState({creditbookuuid, currency, title, currentcard: maincurrencycard, accounts, client_name, client_address, account});
+					// limit, balance and credit token address
+					let limit_amount = await mvcmypwa.getCurrencyAmount(rootsessionuuid, currency.uuid, account.limit);
+					let limit_string = await mvcmypwa.formatCurrencyAmount(rootsessionuuid, currency.uuid, limit_amount);
+					
+					let balance_amount = await mvcmypwa.getCurrencyAmount(rootsessionuuid, currency.uuid, account.balance);
+					let balance_string = await mvcmypwa.formatCurrencyAmount(rootsessionuuid, currency.uuid, balance_amount);
+					
+					let credittoken_address = account.credittoken;
+
+					this.setState({creditbookuuid, currency, title, 
+						currentcard: maincurrencycard, accounts,
+						client_name, client_address, account,
+						limit_string, balance_string, credittoken_address});
 				}
 			}
 
@@ -151,66 +177,10 @@ class CreditAccountView extends React.Component {
 		this._setState({processing: true});
 
 		try {
-			const {creditbookuuid, currentcard, client_address, client_name} = this.state;
+			const {new_limit} = this.state;
 
-			if (currentcard) {
-				card = currentcard;
-				carduuid = card.uuid;
-			}
-			else {
-				this.app.alert('No currency card available');
-				this._setState({processing: false});
-				return;
-			}
+			this.app.alert('update pressed: ' + new_limit);
 
-			if (!client_name || (client_name.length == 0)) {
-				this.app.alert('You need to enter a client name');
-				this._setState({processing: false});
-				return;
-			}
-	
-			if (!client_address || (client_address.length == 0)) {
-				this.app.alert('You need to enter a client address');
-				this._setState({processing: false});
-				return;
-			}
-	
-	
-			// check we have enough transaction credits
-			let tx_fee = {};
-			tx_fee.transferred_credit_units = 0;
-			let create_account_cost_units = 55;
-			tx_fee.estimated_cost_units = create_account_cost_units;
-
-			// need a higher feelevel than standard this.app.getCurrencyFeeLevel(currencyuuuid)
-			let _feelevel = await mvcmypwa.getRecommendedFeeLevel(rootsessionuuid, walletuuid, card.uuid, tx_fee);
-
-			var canspend = await mvcmypwa.canCompleteTransaction(rootsessionuuid, walletuuid, card.uuid, tx_fee, _feelevel).catch(err => {});
-	
-			if (!canspend) {
-				if (tx_fee.estimated_fee.execution_credits > tx_fee.estimated_fee.max_credits) {
-					this.app.alert('The execution of this transaction is too large: ' + tx_fee.estimated_fee.execution_units + ' credit units.');
-					this._setState({processing: false});
-					return;
-				}
-				else {
-					this.app.alert('You must add transaction units to the source card. You need at least ' + tx_fee.required_units + ' credit units.');
-					this._setState({processing: false});
-					return;
-				}
-			}
-			
-			// create client account
-			let accountdata = {name: client_name, address: client_address};
-
-			let txhash = await mvcmycreditbook.createCreditAccount(rootsessionuuid, walletuuid, carduuid, creditbookuuid, accountdata, client_address, _feelevel)
-			.catch(err => {
-				console.log('error in CreditAccountView.onSubmit: ' + err);
-			});
-	
-			// goto new account
-			let params = {action: 'view', creditbookuuid, client_address};
-			this.app.gotoRoute('creditcard', params);
 			
 			this._setState({processing: false});
 	
@@ -220,7 +190,7 @@ class CreditAccountView extends React.Component {
 			console.log('exception in onSubmit: ' + e);
 			this.app.error('exception in onSubmit: ' + e);
 
-			this.app.alert('could not create client account');
+			this.app.alert('could not update credit account');
 
 			this._setState({processing: false});
 		}
@@ -232,10 +202,69 @@ class CreditAccountView extends React.Component {
 	
 	// rendering
 	renderAccountUpdateForm() {
-		let { client_name, client_address} = this.state;
+		let { balance_string, limit_string, credittoken_address, new_limit} = this.state;
 
 		return (
 			<div className="Form">
+				<div >
+					<FormGroup className="CurrencyCard" controlId="balance">
+						<span>
+							<FormLabel>Balance</FormLabel>
+							<FormControl
+								className="CurrencyCardBalance"
+								disabled
+								autoFocus
+								type="text"
+								value={balance_string}
+							/>
+						</span>
+						<span>
+							<FormLabel>Limit</FormLabel>
+							<FormControl
+								className="CurrencyCardBalance"
+								disabled
+								autoFocus
+								type="text"
+								value={limit_string}
+							/>
+						</span>
+					</FormGroup>
+
+
+					<FormGroup controlId="address">
+						<FormLabel>Credit Token Address</FormLabel>
+						<FormGroup className="ClaimerCardLine">
+							<FormControl
+								className="CurrencyCardAddress"
+								disabled
+								autoFocus
+								type="text"
+								value={(credittoken_address ? credittoken_address : '')}
+							/>
+							<div className="ShareIcon">
+								<TextCopyIcon
+									app={this.app}
+									text={credittoken_address}
+									message="address has been copied to clipboard"
+								/>
+							</div>
+						</FormGroup>
+					</FormGroup>
+
+					<FormGroup controlId="credit_limit">
+					<FormLabel>New limit</FormLabel>
+					<InputGroup>
+						<FormControl 
+							autoFocus
+							type="text"
+							value={new_limit}
+							onChange={e => this.setState({new_limit: e.target.value})}
+						/>
+					</InputGroup>
+				</FormGroup>
+
+
+				</div>
 
 				<Button onClick={this.onSubmit.bind(this)} type="submit">
 				 Update credit account

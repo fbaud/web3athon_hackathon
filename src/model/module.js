@@ -662,8 +662,11 @@ var Module = class {
 		let creditbookobj = await this._getCreditBookObject(sessionuuid, walletuuid, carduuid, creditbookuuid);
 
 		let account = {address: client_addr, name: accountname};
-		account.limit = await creditbookobj.creditlimitOf(client_addr);
-		account.balance = await creditbookobj.balanceOf(client_addr);
+		let limit_str = await creditbookobj.creditlimitOf(client_addr);
+		let balance_str = await creditbookobj.balanceOf(client_addr);
+		
+		account.limit = parseInt(limit_str);
+		account.balance = parseInt(balance_str);
 		account.credittoken = await creditbookobj.creditToken(client_addr);
 
 		return account;
