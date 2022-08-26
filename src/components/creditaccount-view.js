@@ -130,11 +130,12 @@ class CreditAccountView extends React.Component {
 					let client_address = (account && account.address ? account.address : 'unknown');
 
 					// limit, balance and credit token address
-					let limit_amount = await mvcmypwa.getCurrencyAmount(rootsessionuuid, currency.uuid, account.limit);
-					let limit_string = await mvcmypwa.formatCurrencyAmount(rootsessionuuid, currency.uuid, limit_amount);
 					
-					let balance_amount = await mvcmypwa.getCurrencyAmount(rootsessionuuid, currency.uuid, account.balance);
-					let balance_string = await mvcmypwa.formatCurrencyAmount(rootsessionuuid, currency.uuid, balance_amount);
+					var options = {showdecimals: true, decimalsshown: 2 /* currency.decimals */};
+ 
+					let limit_string = await mvcmycreditbook._formatCurrencyIntAmount(rootsessionuuid, currency.uuid, account.limit, options);
+					
+					let balance_string = await mvcmycreditbook._formatCurrencyIntAmount(rootsessionuuid, currency.uuid, account.balance, options);
 					
 					let credittoken_address = account.credittoken;
 
@@ -177,11 +178,53 @@ class CreditAccountView extends React.Component {
 		this._setState({processing: true});
 
 		try {
-			const {new_limit} = this.state;
+			let {creditbookuuid, currentcard, currency, client_address, new_limit} = this.state;
 
-			this.app.alert('update pressed: ' + new_limit);
+			let new_limit_amount = await mvcmypwa.getCurrencyAmount(rootsessionuuid, currency.uuid, new_limit);
+			let new_limit_amount_int = await new_limit_amount.toInteger();
 
-			
+			// check we have enough transaction credits
+			let tx_fee = {};
+			tx_fee.transferred_credit_units = 0;
+			let update_cost_units = 3;
+			tx_fee.estimated_cost_units = update_cost_units;
+
+			let _feelevel = await mvcmypwa.getRecommendedFeeLevel(rootsessionuuid, walletuuid, currentcard.uuid, tx_fee);
+
+
+			var canspend = await mvcmypwa.canCompleteTransaction(rootsessionuuid, walletuuid, currentcard.uuid, tx_fee, _feelevel).catch(err => {});
+
+			if (!canspend) {
+				if (tx_fee.estimated_fee.execution_credits > tx_fee.estimated_fee.max_credits) {
+					this.app.alert('The execution of this transaction is too large: ' + tx_fee.estimated_fee.execution_units + ' credit units.');
+					this._setState({processing: false});
+					return;
+				}
+				else {
+					this.app.alert('You must add transaction units to the source card. You need at least ' + tx_fee.required_units + ' credit units.');
+					this._setState({processing: false});
+					return;
+				}
+			}
+	
+			// perform update
+			let txhash = await mvcmycreditbook.registerCreditAccountLimit(rootsessionuuid, walletuuid, currentcard.uuid, creditbookuuid, client_address, new_limit_amount_int, _feelevel)
+			.catch(err => {
+				console.log('error in CreditAccountView.onSubmit: ' + err);
+			});
+	
+			if (!txhash) {
+				this.app.alert('Could not update limit');
+				this.setState({processing: false});
+				return;
+			}
+
+			// goto credit book to let time for new account to be updated
+			let params = {action: 'view', creditbookuuid};
+
+			this.app.gotoRoute('creditbook', params);
+	
+
 			this._setState({processing: false});
 	
 			return true;

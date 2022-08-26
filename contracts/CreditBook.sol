@@ -117,7 +117,10 @@ contract CreditBook {
             _balances[client] = _old_balance + limit - _old_limit;
         }
         else {
-            _balances[client] = _old_balance + _old_limit - limit;
+            if (_old_balance > _old_limit - limit)
+            _balances[client] = _old_balance - _old_limit + limit;
+            else
+            _balances[client] = 0;
         }
  
         return _creditlimits[client];

@@ -292,6 +292,12 @@ var CreditBook = class extends SmartContractClass {
 		return contractinterface.createAccount(accountdata, client_address, ethtx);
 	}
 	
+	async updateCreditLimit(client_address, new_limit, ethtx) {
+		var contractinterface = this.getContractInterface();
+
+		return contractinterface.updateCreditLimit(client_address, new_limit, ethtx);
+	}
+	
 
 }
 

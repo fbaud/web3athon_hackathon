@@ -355,7 +355,59 @@ var CreditBookContractInterface = class {
 			throw err;
 		});
 	}
+
+	updateCreditLimit(client_address, new_limit, ethtx, callback) {
+		var contractinstance = this.getContractInstance();
+
+		var fromaccount = ethtx.getFromAccount();
+		var payingaccount = ethtx.getPayingAccount();
+
+		payingaccount = (payingaccount ? payingaccount : fromaccount);
+
+		var gas = ethtx.getGas();
+		var gasPrice = ethtx.getGasPrice();
+
+		var transactionuuid = ethtx.getTransactionUUID();
+		var value = ethtx.getValue();
+
+
+		var contractinstance = this.getContractInstance();
+		var contracttransaction = contractinstance.getContractTransactionObject(payingaccount, gas, gasPrice);
+
+		contracttransaction.setArguments(args);
+		
+		contracttransaction.setContractTransactionUUID(transactionuuid);
+		contracttransaction.setValue(value);
+
+		contracttransaction.setMethodName('updateCreditLimit');		
+		
+		var args = [];
 	
+		args.push(client_address);
+		args.push(new_limit);
+
+		contracttransaction.setArguments(args);
+		
+		return contractinstance.method_send(contracttransaction)
+		.then(function(res) {
+			console.log('CreditBookContractInterface.updateCreditLimit promise resolved, result is ' + res);
+
+			if (callback)
+				callback(null, res);
+			
+			return res;
+		})
+		.catch(err => {
+			console.log('CreditBookContractInterface.updateCreditLimit error: ' + err);
+
+			if (callback)
+				callback(err, null);
+
+			throw err;
+		});
+	}
+	
+
 }
 
 if ( typeof window !== 'undefined' && typeof window.GlobalClass !== 'undefined' && window.GlobalClass ) {

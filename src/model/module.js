@@ -665,11 +665,181 @@ var Module = class {
 		let limit_str = await creditbookobj.creditlimitOf(client_addr);
 		let balance_str = await creditbookobj.balanceOf(client_addr);
 		
+		account.limit_string = limit_str;
 		account.limit = parseInt(limit_str);
+		account.balance_string = balance_str;
 		account.balance = parseInt(balance_str);
 		account.credittoken = await creditbookobj.creditToken(client_addr);
 
 		return account;
+	}
+
+	async registerCreditAccountLimit(sessionuuid, walletuuid, carduuid, creditbookuuid, client_addr, new_limit, feelevel) {
+		if (!sessionuuid)
+		return Promise.reject('session uuid is undefined');
+	
+		if (!walletuuid)
+			return Promise.reject('wallet uuid is undefined');
+
+		if (!carduuid)
+			return Promise.reject('card uuid is undefined');
+		
+		if (!creditbookuuid)
+			return Promise.reject('credit book uuid is undefined');
+
+
+				
+		var global = this.global;
+		var _apicontrollers = this._getClientAPI();
+		var mvcpwa = this._getMvcPWAObject();
+
+		var session = await _apicontrollers.getSessionObject(sessionuuid);
+		
+		if (!session)
+			return Promise.reject('could not find session ' + sessionuuid);
+		
+		var wallet = await _apicontrollers.getWalletFromUUID(session, walletuuid);
+		
+		if (!wallet)
+			return Promise.reject('could not find wallet ' + walletuuid);
+	
+		var card = await wallet.getCardFromUUID(carduuid);
+
+		if (!card)
+			return Promise.reject('could not find card ' + carduuid);
+
+		// get credit book on chain
+		let creditbookobj = await this._getCreditBookObject(sessionuuid, walletuuid, carduuid, creditbookuuid);
+
+		// child session corresponding to card to perform transaction
+		var childsession = await mvcpwa._getMonitoredCardSession(session, wallet, card);
+				
+		var fromaccount = card._getSessionAccountObject();
+		var from_card_scheme = card.getScheme();
+
+		var ethereumnodeaccessmodule = global.getModuleObject('ethereum-node-access');
+
+		var ethereumtransaction = ethereumnodeaccessmodule.getEthereumTransactionObject(childsession, fromaccount);
+		
+		// fee
+		var fee = await _apicontrollers.createSchemeFee(from_card_scheme, feelevel);
+
+		ethereumtransaction.setGas(fee.gaslimit);
+		ethereumtransaction.setGasPrice(fee.gasPrice);	
+
+		let txhash = await creditbookobj.updateCreditLimit(client_addr, new_limit, ethereumtransaction);
+
+		return txhash;
+	}
+
+	//
+	// utils
+	//
+
+
+	async _fitAmountString(session, amount_string, decimals, options) {
+		if (amount_string === undefined)
+			return;
+		
+		var _inputamountstring = amount_string;
+		var amountstring;
+
+		if (_inputamountstring.includes(".")) {
+			const parts = _inputamountstring.split('.');
+
+			// integer part
+			var integerpart = parts[0];
+			var decimalpart;
+
+			if (parts[1].length > decimals)
+				decimalpart = parts[1].substring(decimals); // cut
+			else {
+				decimalpart = parts[1]; // fill if necessary
+				for (var i = 0; i < (decimals -parts[1].length) ; i++) decimalpart += '0';
+			}
+
+			amountstring = integerpart + '.' + decimalpart;
+		}
+		else {
+			if (_inputamountstring.length > decimals) {
+				// integer part
+				var integerpart = _inputamountstring.substring(0, _inputamountstring.length - decimals);
+				var decimalpart = _inputamountstring.substring(_inputamountstring.length - decimals);
+	
+				amountstring = integerpart + '.' + decimalpart;
+			}
+			else {
+				var leading = '';
+				for (var i = 0; i < (decimals -_inputamountstring.length) ; i++) leading += '0';
+				amountstring = '0.' + leading + _inputamountstring;
+			}
+		}
+		
+
+
+		if (options) {
+			if (typeof options.showdecimals !== 'undefined') {
+				if (options.showdecimals === false) {
+					// we remove . and after
+					amountstring = amountstring.substring(0, amountstring.indexOf('.'));
+				}
+				else {
+					var decimalsshown = (options.decimalsshown ? options.decimalsshown : decimals);
+					amountstring = amountstring.substring(0, amountstring.indexOf('.') + 1 + decimalsshown);
+				}
+
+			}
+		}
+
+		return amountstring;
+	}
+	
+
+	async _formatMonetaryAmountString(session, amount_string, symbol, decimals, options) {
+		var amountstring = await this._fitAmountString(session, amount_string, decimals, options);
+		
+		return amountstring + ' ' + symbol;
+	}
+
+	async _formatCurrencyIntAmount(sessionuuid, currencyuuid, amount_int, options) {
+		// because of issues with double points when formatting  
+		// with mvccurrencies formatCurrencyAmount (e.g. 0.30.10) from integer
+
+		if (!sessionuuid)
+			return Promise.reject('session uuid is undefined');
+	
+		if (!currencyuuid)
+			return Promise.reject('currency uuid is undefined');
+		
+	
+		
+		var global = this.global;
+		var _apicontrollers = this._getClientAPI();
+		var mvcpwa = this._getMvcPWAObject();
+
+		var session = await _apicontrollers.getSessionObject(sessionuuid);
+		
+		if (!session)
+			return Promise.reject('could not find session ' + sessionuuid);
+		
+		var currency = await mvcpwa.getCurrencyFromUUID(sessionuuid, currencyuuid);
+
+		if (!currency)
+			return Promise.reject('could not find currency ' + currencyuuid);
+
+		var currency_amount = await mvcpwa.getCurrencyAmount(sessionuuid, currency.uuid, amount_int);
+		var tokenamountstring = await currency_amount.toString();
+
+		//var currency_amount_string = await mvcpwa.formatCurrencyAmount(sessionuuid, currency.uuid, currency_amount, options);
+		var _options = (options ? options : {showdecimals: true, decimalsshown: 2});
+		
+		var tokenamountstring = await currency_amount.toString(); 
+		// !!! faulty because of _formatAmount (see above)
+		
+		var currencyamountstring = await this._formatMonetaryAmountString(session, tokenamountstring, currency.symbol, currency.decimals, _options);
+
+
+		return currencyamountstring;
 	}
 
 }
