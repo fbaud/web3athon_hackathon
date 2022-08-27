@@ -895,10 +895,61 @@ var Module = class {
 		let owner = await creditbookobj.getChainOwner();
 		let title = await creditbookobj.getChainTitle();
 
+		erc20credit.creditbook = creditbook_addr;
 		erc20credit.creditor = owner;
 		erc20credit.description = title;
 
 		return erc20credit;
+	}
+
+	async fetchCreditLimit(sessionuuid, walletuuid, currencyuuid, credittoken_addr, client_addr) {
+		// !!! as a privacy measure, you need to provide the client address to get the limit
+
+		if (!sessionuuid)
+		return Promise.reject('session uuid is undefined');
+	
+		if (!walletuuid)
+			return Promise.reject('wallet uuid is undefined');
+
+		if (!currencyuuid)
+			return Promise.reject('currency uuid is undefined');
+
+		var global = this.global;
+		var _apicontrollers = this._getClientAPI();
+		var mvcpwa = this._getMvcPWAObject();
+	
+		var session = await _apicontrollers.getSessionObject(sessionuuid);
+		
+		if (!session)
+			return Promise.reject('could not find session ' + sessionuuid);
+
+		var wallet = await _apicontrollers.getWalletFromUUID(session, walletuuid);
+	
+		if (!wallet)
+			return Promise.reject('could not find wallet ' + walletuuid);
+	
+		var currency = await mvcpwa.getCurrencyFromUUID(sessionuuid, currencyuuid);
+
+		if (!currency)
+			return Promise.reject('could not find currency ' + currencyuuid);
+
+		// get erc20 credit on chain
+		let erc20credit = await this.fetchCreditToken(sessionuuid, walletuuid, currencyuuid, credittoken_addr);
+
+		let creditbook_addr = erc20credit.creditbook;
+
+
+		// get a child session on correct scheme
+		var currencyscheme = await mvcpwa._getCurrencyScheme(session, currency);
+		var childsession = await mvcpwa._getMonitoredSchemeSession(session, wallet, currencyscheme);
+
+		let data = {address: creditbook_addr};
+		let creditbookobj = await this._createCreditBookObject(childsession, currency, data);
+
+		let limit_string = await creditbookobj.creditlimitOf(client_addr);
+		let limit_int = parseInt(limit_string);
+
+		return limit_int;
 	}
 
 	// credit currency
@@ -972,7 +1023,7 @@ var Module = class {
 
 		// look if we have not cloned the card already
 		var cards = await wallet.getCardList(true);
-		var carduuid = card.getCardUUID;
+		var carduuid = card.getCardUUID();
 
 		for (var i = 0; i < cards.length; i++) {
 			let xtradata = cards[i].getXtraData('myquote');

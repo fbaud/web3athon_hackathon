@@ -13,8 +13,8 @@ import {App} from './nodemodules/@primusmoney/react_pwa';
 console.log('loading index.js');
 
 // app config
-var EXEC_ENV = 'dev';
-var PWA_APP_VERSION = '0.40.22.2022.08.22';
+var EXEC_ENV = 'prod';
+var PWA_APP_VERSION = '0.40.22.2022.08.27';
 
 
 App.EXEC_ENV = EXEC_ENV;

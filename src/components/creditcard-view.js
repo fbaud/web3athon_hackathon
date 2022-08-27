@@ -22,7 +22,7 @@ class CreditCardView extends React.Component {
 		this.closing = false;
 
 
-		let creditbookuuid = null;
+		this.creditcarduuid = null;
 
 		
 		let title = '';
@@ -45,7 +45,6 @@ class CreditCardView extends React.Component {
 		
 		
 		this.state = {
-				creditbookuuid,
 				currency,
 				title,
 				client_name,
@@ -102,17 +101,42 @@ class CreditCardView extends React.Component {
 			var creditcarduuid = params.creditcarduuid;
 
 			if (creditcarduuid) {
+				this.creditcarduuid = creditcarduuid;
+
 				let creditcard_meta = await mvcmycreditbook.readCreditCard(rootsessionuuid, walletuuid, creditcarduuid);
+
 				let currencyuuid = creditcard_meta.currencyuuid;
-				let carduuid = creditcard_meta.carduuid;
+				let clientcarduuid = creditcard_meta.carduuid;
 				let credittoken_addr = creditcard_meta.credittotken;
 
-				let creditcard = await mvcmycreditbook.getCurrencyCreditCard(rootsessionuuid, walletuuid, carduuid, credittoken_addr);
+				//
+				// client card info
+				let clientcard = await mvcmypwa.getWalletCard(rootsessionuuid, walletuuid, clientcarduuid).catch(err=>{});
+				let client_addr = clientcard.address;
+
+				let options = {showdecimals: true, decimalsshown: 2 /* currency.decimals */};
+
+				//
+				// erc20 credit
+				let erc20credit = await mvcmycreditbook.fetchCreditToken(rootsessionuuid, walletuuid, currencyuuid, credittoken_addr);
+
+				//
+				// credit limit
+				let credit_limit = await mvcmycreditbook.fetchCreditLimit(rootsessionuuid, walletuuid, currencyuuid, credittoken_addr, client_addr);
+ 
+				// limit
+				let limit_string = await mvcmycreditbook._formatCurrencyIntAmount(rootsessionuuid, currencyuuid, credit_limit, options);
+
+				//
+				//  credit card info
+				let creditcard = await mvcmycreditbook.getCurrencyCreditCard(rootsessionuuid, walletuuid, clientcarduuid, credittoken_addr);
 				let creditcurrency = creditcard.currencyuuid;
 
 				let position = await mvcmypwa.getCurrencyPosition(rootsessionuuid, walletuuid, creditcurrency, creditcard.uuid);
 				const position_string = await mvcmypwa.formatCurrencyAmount(rootsessionuuid, creditcurrency, position);
 				const position_int = await position.toInteger();
+
+				this.setState({	limit_string, balance_string: position_string, credittoken_address: credittoken_addr});
 	
 			}
 			// mark target as reached
@@ -147,6 +171,7 @@ class CreditCardView extends React.Component {
 
 		try {
 			let {creditbookuuid, currentcard, currency, client_address, new_limit} = this.state;
+			let creditcarduuid = this.creditcarduuid;
 
 			let new_limit_amount = await mvcmypwa.getCurrencyAmount(rootsessionuuid, currency.uuid, new_limit);
 			let new_limit_amount_int = await new_limit_amount.toInteger();
