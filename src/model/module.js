@@ -901,6 +901,169 @@ var Module = class {
 		return erc20credit;
 	}
 
+	// credit currency
+	async _getCurrencyFromAddress(session, wallet, scheme, credittoken_addr) {
+		var global = this.global;
+		var _apicontrollers = this._getClientAPI();
+		var mvcpwa = this._getMvcPWAObject();
+		var mvccurrenciesmodule = global.getModuleObject('mvc-currencies');
+
+		var sessionuuid = session.getSessionUUID();
+		var schemeuuid = scheme.getSchemeUUID();
+		
+		// check if we have already added it
+		var currencies = await mvccurrenciesmodule.getCurrencies(sessionuuid); // all currencies
+
+		for (var i = 0; i < currencies.length; i++) {
+			if (currencies[i].scheme_uuid != schemeuuid)
+				continue;
+
+			let are_equal = await mvcpwa.areAddressesEqual(sessionuuid, currencies[i].address, credittoken_addr);
+			if (are_equal)
+				return currencies[i];
+		}
+
+		// add a currency on the fly
+		var childsession = await mvcpwa._getMonitoredSchemeSession(session, wallet, scheme);
+	
+		// get token object to access erc20 data
+		let data = {address: credittoken_addr}
+
+		var erc20credittokenobject = await scheme.getTokenObject(credittoken_addr);
+
+		// initialize
+		erc20credittokenobject._getERC20TokenContract(session);
+
+		// synchronize
+		const Token = global.getModuleClass('wallet', 'Token');
+		await Token.synchronizeERC20TokenContract(session, erc20credittokenobject);
+
+		// structure
+		var credit_currency = {};
+
+		credit_currency.uuid = session.guid();
+
+		credit_currency.name = "credit - " + erc20credittokenobject.getName();
+		credit_currency.symbol = erc20credittokenobject.getSymbol();
+		credit_currency.decimals = erc20credittokenobject.getDecimals();
+		credit_currency.address = credittoken_addr;
+		credit_currency.web3providerurl = scheme.getWeb3ProviderUrl();
+		credit_currency.scheme_uuid = schemeuuid;
+		credit_currency.ops = {canpay: true, cantopup: false, canswap: false};
+
+		credit_currency.hidden = false;
+		credit_currency.temporary = true;
+
+		// add to list of currencies
+		var currenciesmodule = global.getModuleObject('currencies');
+		currenciesmodule.addCurrency(credit_currency);
+
+		return credit_currency;
+	}
+
+
+	async _createCurrencyCreditCard(session, wallet, card, credittoken_addr) {
+		var card_scheme = card.scheme
+
+		// get a credit currency for credittoken_addr
+		var credit_currency = await this._getCurrencyFromAddress(session, wallet, card_scheme, credittoken_addr);
+		var creditcard_currencyuuid = credit_currency.uuid;
+
+
+		// look if we have not cloned the card already
+		var cards = await wallet.getCardList(true);
+		var carduuid = card.getCardUUID;
+
+		for (var i = 0; i < cards.length; i++) {
+			let xtradata = cards[i].getXtraData('myquote');
+
+			if (xtradata && xtradata.creditfacility 
+			&& (xtradata.creditfacility.oncard == carduuid)
+			&& (xtradata.creditfacility.credittoken == credittoken_addr)) {
+				// reuse card associating to new credit currency
+				xtradata.currencyuuid = creditcard_currencyuuid;
+
+				return cards[i];
+			}
+		}
+
+		// we clone card on same scheme
+
+		var islocked = card.isLocked();
+
+		if (islocked) {
+			// unlock for cloning
+			await card.unlock();
+		}
+
+		var clonedcard = await wallet.cloneCard(card, card_scheme);
+
+		if (islocked) {
+			// relock
+			card.lock();
+		}
+
+
+		// set it's associated to credit_currency in XtraData
+		let cloned_xtradata = clonedcard.getXtraData('myquote');
+
+		cloned_xtradata = (cloned_xtradata ? cloned_xtradata : {});
+		cloned_xtradata.currencyuuid = creditcard_currencyuuid;
+
+		// save xtradata on creditfacility to re-use card
+		cloned_xtradata.creditfacility = {oncard: card.getCardUUID(), credittoken: credittoken_addr};
+
+		clonedcard.putXtraData('myquote', cloned_xtradata);
+
+		if (clonedcard.isLocked()) {
+			await clonedcard.unlock();
+		}
+
+		await clonedcard.save();
+				
+
+		return clonedcard;
+	}
+
+	async getCurrencyCreditCard(sessionuuid, walletuuid, carduuid, credittoken_addr) {
+		if (!sessionuuid)
+			return Promise.reject('session uuid is undefined');
+		
+		if (!walletuuid)
+			return Promise.reject('wallet uuid is undefined');
+		
+		if (!carduuid)
+			return Promise.reject('card uuid is undefined');
+		
+		var global = this.global;
+		var _apicontrollers = this._getClientAPI();
+
+		var session = await _apicontrollers.getSessionObject(sessionuuid);
+		
+		if (!session)
+			return Promise.reject('could not find session ' + sessionuuid);
+		
+		var wallet = await _apicontrollers.getWalletFromUUID(session, walletuuid);
+		
+		if (!wallet)
+			return Promise.reject('could not find wallet ' + walletuuid);
+		
+		var card = await wallet.getCardFromUUID(carduuid);
+		
+		if (!card)
+			return Promise.reject('could not find card ' + carduuid);
+
+		// get credit card object			
+		var credit_card = await this._createCurrencyCreditCard(session, wallet, card, credittoken_addr)
+
+		var mvcclientwalletmodule = global.getModuleObject('mvc-client-wallet');
+		var creditcard_info = await mvcclientwalletmodule.getCardInfo(sessionuuid, walletuuid, carduuid)
+
+		creditcard_info.currencyuuid = credit_card.getXtraData('myquote').currencyuuid;
+
+		return creditcard_info;
+	}
+
 
 	//
 	// utils

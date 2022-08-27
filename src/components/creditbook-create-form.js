@@ -47,6 +47,30 @@ class CreditBookCreateForm extends React.Component {
 
 
 	// post render commit phase
+	async _readVisibleCurrencies() {
+		let mvcmypwa = this.getMvcMyPWAObject();
+
+		let rootsessionuuid = this.props.rootsessionuuid;
+		let walletuuid = this.props.currentwalletuuid;
+
+		let currencies = await mvcmypwa.getCurrencies(rootsessionuuid, walletuuid);
+
+		if (!currencies)
+		return Promise.reject('could not get list of currencies');
+
+		let arr = [];
+
+		for (var i = 0; i < currencies.length; i++) {
+			if (currencies[i].hidden && (currencies[i].hidden == true))
+			continue;
+
+			arr.push(currencies[i]);
+		}
+
+		return arr;
+	}
+
+
 	componentDidUpdate(prevProps, prevState) {
 		//console.log('CreditBookCreateForm.componentDidUpdate called');
 		
@@ -124,7 +148,7 @@ class CreditBookCreateForm extends React.Component {
 		let walletuuid = this.props.currentwalletuuid;
 
 		// list of currencies
-		this.mvcmypwa.getCurrencies(rootsessionuuid, walletuuid)
+		this._readVisibleCurrencies()
 		.then((currencies) => {
 			this._setState({currencies});
 		})
@@ -180,7 +204,7 @@ class CreditBookCreateForm extends React.Component {
 		}
 
 		// list of currencies
-		var currencies = await this.mvcmypwa.getCurrencies(rootsessionuuid, walletuuid)
+		var currencies = await this._readVisibleCurrencies()
 		.catch(err => {
 			console.log('error in CreditBookCreateForm.checkNavigationState ' + err);
 		});

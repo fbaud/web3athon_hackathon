@@ -99,54 +99,22 @@ class CreditCardView extends React.Component {
 
 		if (app_nav_target && (app_nav_target.route == 'creditcard') && (app_nav_target.reached == false)) {
 			var params = app_nav_target.params;
-			var creditbookuuid = params.creditbookuuid;
-			var client_addr = params.client_addr;
+			var creditcarduuid = params.creditcarduuid;
 
-			if (creditbookuuid && client_addr) {
-				let creditbook = await mvcmycreditbook.readCreditBook(rootsessionuuid, walletuuid, creditbookuuid).catch(err => {});
+			if (creditcarduuid) {
+				let creditcard_meta = await mvcmycreditbook.readCreditCard(rootsessionuuid, walletuuid, creditcarduuid);
+				let currencyuuid = creditcard_meta.currencyuuid;
+				let carduuid = creditcard_meta.carduuid;
+				let credittoken_addr = creditcard_meta.credittotken;
 
-				if (creditbook) {
-					let title = creditbook.title;
-					let creditbookuuid = creditbook.uuid;
+				let creditcard = await mvcmycreditbook.getCurrencyCreditCard(rootsessionuuid, walletuuid, carduuid, credittoken_addr);
+				let creditcurrency = creditcard.currencyuuid;
 
-					// corresponding card
-					let carduuid = creditbook.carduuid;
-
-					let accounts = await mvcmycreditbook.fetchCreditAccounts(rootsessionuuid, walletuuid, carduuid, creditbookuuid);
-
-					// currency
-					let currencyuuid = creditbook.currencyuuid;
-					let currency = await mvcmypwa.getCurrencyFromUUID(rootsessionuuid, currencyuuid)
-					.catch(err => {
-						console.log('error in CreditCardView.checkNavigationState: ' + err);
-					});
-
-					// current card
-					let maincurrencycard = await mvcmypwa.getCurrencyCard(rootsessionuuid, walletuuid, currencyuuid).catch(err=>{});
-
-					// retrieve account
-					let account = await mvcmycreditbook.fetchCreditAccount(rootsessionuuid, walletuuid, carduuid, creditbookuuid, client_addr).catch(err=>{});
-					let client_name = (account && account.name ? account.name : 'unknown');
-					let client_address = (account && account.address ? account.address : 'unknown');
-
-					// limit, balance and credit token address
-					
-					var options = {showdecimals: true, decimalsshown: 2 /* currency.decimals */};
- 
-					let limit_string = await mvcmycreditbook._formatCurrencyIntAmount(rootsessionuuid, currency.uuid, account.limit, options);
-					
-					let balance_string = await mvcmycreditbook._formatCurrencyIntAmount(rootsessionuuid, currency.uuid, account.balance, options);
-					
-					let credittoken_address = account.credittoken;
-
-					this.setState({creditbookuuid, currency, title, 
-						currentcard: maincurrencycard, accounts,
-						client_name, client_address, account,
-						limit_string, balance_string, credittoken_address});
-				}
+				let position = await mvcmypwa.getCurrencyPosition(rootsessionuuid, walletuuid, creditcurrency, creditcard.uuid);
+				const position_string = await mvcmypwa.formatCurrencyAmount(rootsessionuuid, creditcurrency, position);
+				const position_int = await position.toInteger();
+	
 			}
-
-
 			// mark target as reached
 			app_nav_target.reached = true;
 		}

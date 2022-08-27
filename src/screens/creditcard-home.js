@@ -32,7 +32,16 @@ class CreditCardScreen extends React.Component {
 		let app_nav_state = this.app.getNavigationState();
 		let app_nav_target = app_nav_state.target;
 
-		if (app_nav_target && (app_nav_target.route == 'creditaccount') && (app_nav_target.reached == false)) {
+		if (app_nav_target && (app_nav_target.route == 'creditcard') && (app_nav_target.reached == false)) {
+			var params = app_nav_target.params;
+
+			if (params) {
+				let lineinfo = '';
+				let action = (params.action ? params.action : 'create');
+	
+
+				this.setState({action, lineinfo});
+			}
 
 			// let CreditCardView mark as reached
 	   }
