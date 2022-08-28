@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: MIT
+// PrimusMoney Contracts v0.1
 
 pragma solidity >=0.7.0 <0.9.0;
 
@@ -127,6 +128,8 @@ contract CreditBook {
    }
 
    function payWithCredits(address client, uint256 amount) public virtual returns (bool) {
+        address _credittokenaddr = _erc20credits[client];
+        require(msg.sender == _credittokenaddr); // only credit token contract can call payWithCredits
         uint _old_balance = _balances[client];
 
         require(_old_balance >= amount, "CREDIT: transfer amount exceeds balance");
@@ -144,11 +147,14 @@ contract CreditBook {
         uint _current_limit = _creditlimits[_client];
         uint _current_balance = _balances[_client];
 
-        require( (_current_limit - _current_balance) <= amount, "TOPUP: amount exceeds ceiling");
+        require( (_current_limit - _current_balance) >= amount, "TOPUP: amount exceeds ceiling");
 
         IERC20 tok = IERC20(_currency_token);
 
-        bool _done = tok.transfer(_owner, amount);
+        uint256 _allowance = tok.allowance(_client, address(this));
+        require(_allowance >= amount, "TOPUP: check the currency allowance for contract");
+
+        bool _done = tok.transferFrom(_client, _owner, amount);
 
         if (_done) {
             _balances[_client] = _current_balance + amount;

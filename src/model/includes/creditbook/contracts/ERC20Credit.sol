@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
+// PrimusMoney Contracts v0.1
 
-pragma solidity ^0.8.0;
+pragma solidity >=0.7.0 <0.9.0;
 
 import "./erc20/IERC20.sol";
 import "./erc20/extensions/IERC20Metadata.sol";
 import "./utils/Context.sol";
 
-import "./CreditBook.sol";
+import "../CreditBook.sol";
 
 contract ERC20Credit is Context, IERC20, IERC20Metadata {
     address private _creditbook;
@@ -64,8 +65,8 @@ contract ERC20Credit is Context, IERC20, IERC20Metadata {
     }
 
     function transfer(address recipient, uint256 amount) public virtual override returns (bool) {
-        require(_msgSender() == _client);
-        require(recipient == _owner);
+        require(_msgSender() == _client, "TRANSFER: only benificiary of credit can transfer");
+        require(recipient == _owner, "TRANSFER: can only transfer to creditor");
 
         CreditBook _book = CreditBook(_creditbook);
 
