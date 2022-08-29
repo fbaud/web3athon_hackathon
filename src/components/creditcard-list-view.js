@@ -59,9 +59,21 @@ class CreditCardListView extends React.Component {
 			let rootsessionuuid = this.props.rootsessionuuid;
 			let walletuuid = this.props.currentwalletuuid;
 
-			let cards = await mvcmycreditbook.readCreditCards(rootsessionuuid, walletuuid);
+			let creditcards = await mvcmycreditbook.readCreditCards(rootsessionuuid, walletuuid);
 
-			this.setState({items: cards});
+			let items = [];
+
+			for (var i = 0; i < creditcards.length; i++) {
+				let creditcard = creditcards[i];
+
+				let item = {uuid: creditcard.uuid};
+
+				item.formattedtime = mvcmypwa.formatDate(creditcard.savetime/1000, 'YYYY-mm-dd HH:MM:SS');
+
+				items.push(item);
+			}			
+
+			this.setState({items});
 	}
 		catch(e) {
 			console.log('exception in CreditCardListView.checkNavigationState: '+ e);
@@ -99,13 +111,13 @@ class CreditCardListView extends React.Component {
 
 		let uuid = item.uuid;
 
-		let name = mvcmypwa.fitString(item.uuid, 21);
-		let address = mvcmypwa.fitString(item.credittoken, 21);
+		let time = item.formattedtime;
+		let description = mvcmypwa.fitString(item.uuid, 21);
 
 		return (
 			<tr key={uuid} onClick={() => this.onClickItem(item)}>
-				<td>{uuid}</td>
-				<td>{address}</td>
+				<td>{time}</td>
+				<td>{description}</td>
 			</tr>
 		);
 	}
@@ -117,8 +129,8 @@ class CreditCardListView extends React.Component {
 			<Table responsive>
 				<thead className="ListHeader">
 					<tr>
-					<th>Name</th>
-					<th>Address</th>
+					<th>Time</th>
+					<th>Description</th>
 					</tr>
 				</thead>
 				<tbody className="ListItem" >

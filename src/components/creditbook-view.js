@@ -61,8 +61,8 @@ class CreditBookView extends React.Component {
 		let mvcmypwa = this.getMvcMyPWAObject();
 
 		let message_text = mvcmypwa.t(
-			'You can add credit lines on this book. \
-			 Each credit line will let your client choose \
+			'You can add credit accounts on this book. \
+			 Each credit account will let your client choose \
              to pay cash with a currency card or use \
              their credit if the balance allows it.');
 	
@@ -202,7 +202,7 @@ class CreditBookView extends React.Component {
 	
 			// goto new account
 			let params = {action: 'view', creditbookuuid, client_address};
-			this.app.gotoRoute('creditaccount', params);
+			this.app.gotoRoute('creditbook', params);
 			
 			this._setState({processing: false});
 	
@@ -276,12 +276,12 @@ class CreditBookView extends React.Component {
 				<FormGroup controlId="currency">
 					<FormLabel>Currency</FormLabel>
 					<FormControl 
-							disabled
-							autoFocus
-							type="text"
-							value={currency.name}
-							onChange={e => this.onChangeCurrency(e)}
-						/>
+						disabled
+						autoFocus
+						type="text"
+						value={(currency && currency.name ? currency.name : '')}
+						onChange={e => this.onChangeCurrency(e)}
+					/>
 				</FormGroup>
 
 				<div className="Separator">&nbsp;</div>
@@ -304,16 +304,26 @@ class CreditBookView extends React.Component {
 		);
     }
 
-	render() {
+	renderForm() {
 		return (
-			<div className="Container">
-				<div className="Title">Credit Book View</div>
+			<div className="Form">
 				{ this.renderCreditBookView()}
 				<div className="Separator">&nbsp;</div>
 				{ this.renderAccountList()}
 			</div>
 		  );
 	}
+
+	render() {
+		return (
+			<div className="Container">
+				<div className="Title">Credit Book View</div>
+				{ this.renderForm()}
+			</div>
+		  );
+	}
+	
+
 	
 }
 

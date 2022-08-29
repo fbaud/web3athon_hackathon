@@ -25,37 +25,23 @@ class CreditCardView extends React.Component {
 		this.creditcarduuid = null;
 
 		
-		let title = '';
-		let currency = {symbol: ''};
-
-		let client_name = null;
-		let client_address = null;
-
-		let accounts = [];
-
-		let currentcard = null;
-
-		let account = null;
-
-		let limit_string = null;
-		let balance_string = null;
-		let credittoken_address = null;
-
-		let new_limit = null;
-		
-		
 		this.state = {
-				currency,
-				title,
-				client_name,
- 				client_address,
-                accounts,
-				currentcard,
-				account,
-				limit_string,
-				balance_string,
-				credittoken_address,
-				new_limit,
+				currency: {symbol: ''},
+				title: '',
+
+				clientcard: null,
+				client_creditbalance: 'loading...',
+				client_position: null,
+				client_position_int: -1,
+				client_position_string: 'loading...',
+				client_address_string: 'loading...',
+				web3providerurl_string: 'loading...',
+				message_text: 'loading...',
+	
+				creditcard: null,
+				credit_limit_string: 'loading...',
+				credit_balance_string: 'loading...',
+
 				message_text: 'loading...',
 				processing: false
 		}
@@ -75,10 +61,10 @@ class CreditCardView extends React.Component {
 		let mvcmypwa = this.getMvcMyPWAObject();
 
 		let message_text = mvcmypwa.t(
-			'You can raise or lower credit for this account. \
-			 The balance will be adapted accordingly. \
-             Note that if lowering the credit limit to zero \
-			 corresponds to closing the account.');
+			'You can check above what is your credit limit \
+			 and credit balance for the corresponding credit facility. \
+             Below you have the position in cash of your currency card. \
+			 You can use available cash to topup your credit balance.');
 	
 		
 		this.setState({message_text});
@@ -100,6 +86,10 @@ class CreditCardView extends React.Component {
 			var params = app_nav_target.params;
 			var creditcarduuid = params.creditcarduuid;
 
+			let options = {showdecimals: true, decimalsshown: 2 /* currency.decimals */};
+
+
+
 			if (creditcarduuid) {
 				this.creditcarduuid = creditcarduuid;
 
@@ -110,11 +100,34 @@ class CreditCardView extends React.Component {
 				let credittoken_addr = creditcard_meta.credittotken;
 
 				//
-				// client card info
+				// currency
+				let currency = await mvcmypwa.getCurrencyFromUUID(rootsessionuuid, currencyuuid);
+
+				//
+				// client card
 				let clientcard = await mvcmypwa.getWalletCard(rootsessionuuid, walletuuid, clientcarduuid).catch(err=>{});
 				let client_addr = clientcard.address;
 
-				let options = {showdecimals: true, decimalsshown: 2 /* currency.decimals */};
+				let clientscheme = await mvcmypwa.getCardSchemeInfo(rootsessionuuid, walletuuid, clientcard.uuid);
+
+				const client_credits = await mvcmypwa.getCreditBalance(rootsessionuuid, walletuuid, clientcarduuid);
+				const client_creditbalance = client_credits.transactionunits;
+
+				const client_position = await mvcmypwa.getCurrencyPosition(rootsessionuuid, walletuuid, currencyuuid, clientcarduuid);
+				const client_position_string = await mvcmypwa.formatCurrencyAmount(rootsessionuuid, currencyuuid, client_position);
+				const client_position_int = await client_position.toInteger();
+		
+				
+				// message translated in user's language
+				let message_text = '';
+				
+				// export
+				let client_address = clientcard.address;
+				let web3providerurl = clientscheme.network.ethnodeserver.web3_provider_url;
+
+				let client_address_string = (client_address ? mvcmypwa.fitString(client_address, 32) : '');
+				let web3providerurl_string = (web3providerurl ? mvcmypwa.fitString(web3providerurl, 48) : '');
+
 
 				//
 				// erc20 credit
@@ -125,18 +138,31 @@ class CreditCardView extends React.Component {
 				let credit_limit = await mvcmycreditbook.fetchCreditLimit(rootsessionuuid, walletuuid, currencyuuid, credittoken_addr, client_addr);
  
 				// limit
-				let limit_string = await mvcmycreditbook._formatCurrencyIntAmount(rootsessionuuid, currencyuuid, credit_limit, options);
+				let credit_limit_string = await mvcmycreditbook._formatCurrencyIntAmount(rootsessionuuid, currencyuuid, credit_limit, options);
 
 				//
 				//  credit card info
 				let creditcard = await mvcmycreditbook.getCurrencyCreditCard(rootsessionuuid, walletuuid, clientcarduuid, credittoken_addr);
-				let creditcurrency = creditcard.currencyuuid;
+				let creditcurrencyuuid = creditcard.currencyuuid;
 
-				let position = await mvcmypwa.getCurrencyPosition(rootsessionuuid, walletuuid, creditcurrency, creditcard.uuid);
-				const position_string = await mvcmypwa.formatCurrencyAmount(rootsessionuuid, creditcurrency, position);
-				const position_int = await position.toInteger();
+				let credit_balance_pos = await mvcmypwa.getCurrencyPosition(rootsessionuuid, walletuuid, creditcurrencyuuid, creditcard.uuid);
+				const credit_balance_string = await mvcmypwa.formatCurrencyAmount(rootsessionuuid, creditcurrencyuuid, credit_balance_pos);
+				const credit_balance = await credit_balance_pos.toInteger();
 
-				this.setState({	limit_string, balance_string: position_string, credittoken_address: credittoken_addr});
+				this.setState({	
+					currency,
+
+					title: erc20credit.description, 
+
+					clientcard,
+					client_address_string,
+					client_creditbalance, 
+					client_position_int, client_position_string,
+					web3providerurl, web3providerurl_string,
+
+					creditcard,
+					credit_limit, credit_limit_string, 
+					credit_balance, credit_balance_string});
 	
 			}
 			// mark target as reached
@@ -170,22 +196,40 @@ class CreditCardView extends React.Component {
 		this._setState({processing: true});
 
 		try {
-			let {creditbookuuid, currentcard, currency, client_address, new_limit} = this.state;
+			let {clientcard, client_position_int, credit_limit, credit_balance} = this.state;
 			let creditcarduuid = this.creditcarduuid;
 
-			let new_limit_amount = await mvcmypwa.getCurrencyAmount(rootsessionuuid, currency.uuid, new_limit);
-			let new_limit_amount_int = await new_limit_amount.toInteger();
+			let creditcard_meta = await mvcmycreditbook.readCreditCard(rootsessionuuid, walletuuid, creditcarduuid);
+
+			let currencyuuid = creditcard_meta.currencyuuid;
+			let clientcarduuid = creditcard_meta.carduuid;
+			let credittoken_addr = creditcard_meta.credittotken;
+
+			// amount to topup
+			let amount = credit_limit - credit_balance;
+
+			if (amount <= 0) {
+				this.app.alert('Balance is already at its top');
+				this._setState({processing: false});
+				return;
+			}
+
+			if (amount > client_position_int) {
+				this.app.alert('Not enough funds to top up');
+				this._setState({processing: false});
+				return;
+			}
 
 			// check we have enough transaction credits
 			let tx_fee = {};
 			tx_fee.transferred_credit_units = 0;
-			let update_cost_units = 3;
-			tx_fee.estimated_cost_units = update_cost_units;
+			let topup_cost_units = 3;
+			tx_fee.estimated_cost_units = topup_cost_units;
 
-			let _feelevel = await mvcmypwa.getRecommendedFeeLevel(rootsessionuuid, walletuuid, currentcard.uuid, tx_fee);
+			let _feelevel = await mvcmypwa.getRecommendedFeeLevel(rootsessionuuid, walletuuid, clientcard.uuid, tx_fee);
 
 
-			var canspend = await mvcmypwa.canCompleteTransaction(rootsessionuuid, walletuuid, currentcard.uuid, tx_fee, _feelevel).catch(err => {});
+			var canspend = await mvcmypwa.canCompleteTransaction(rootsessionuuid, walletuuid, clientcard.uuid, tx_fee, _feelevel).catch(err => {});
 
 			if (!canspend) {
 				if (tx_fee.estimated_fee.execution_credits > tx_fee.estimated_fee.max_credits) {
@@ -200,22 +244,22 @@ class CreditCardView extends React.Component {
 				}
 			}
 	
-			// perform update
-			let txhash = await mvcmycreditbook.registerCreditAccountLimit(rootsessionuuid, walletuuid, currentcard.uuid, creditbookuuid, client_address, new_limit_amount_int, _feelevel)
+			// perform top up
+			let txhash = await mvcmycreditbook.topupCurrencyCreditCard(rootsessionuuid, walletuuid, clientcard.uuid, credittoken_addr, amount, _feelevel)
 			.catch(err => {
 				console.log('error in CreditCardView.onSubmit: ' + err);
 			});
 	
 			if (!txhash) {
-				this.app.alert('Could not update limit');
+				this.app.alert('Could not top up credit card');
 				this.setState({processing: false});
 				return;
 			}
 
-			// goto credit book to let time for new account to be updated
-			let params = {action: 'view', creditbookuuid};
+			// goto list of credit card to let time for new balance to be updated
+			let params = {action: 'view'};
 
-			this.app.gotoRoute('creditbook', params);
+			this.app.gotoRoute('creditcards', params);
 	
 
 			this._setState({processing: false});
@@ -237,73 +281,84 @@ class CreditCardView extends React.Component {
 
 	
 	// rendering
-	renderAccountUpdateForm() {
-		let { balance_string, limit_string, credittoken_address, new_limit} = this.state;
+	renderCurrencyCardView() {
+		let { currency, client_address_string,
+			client_creditbalance, client_position_string,
+			address, web3providerurl,web3providerurl_string } = this.state;
+			
 
+		
 		return (
 			<div className="Form">
-				<div >
-					<FormGroup className="CurrencyCard" controlId="balance">
-						<span>
-							<FormLabel>Balance</FormLabel>
-							<FormControl
-								className="CurrencyCardBalance"
-								disabled
-								autoFocus
-								type="text"
-								value={balance_string}
-							/>
-						</span>
-						<span>
-							<FormLabel>Limit</FormLabel>
-							<FormControl
-								className="CurrencyCardBalance"
-								disabled
-								autoFocus
-								type="text"
-								value={limit_string}
-							/>
-						</span>
-					</FormGroup>
+				<FormGroup className="CurrencyCard" controlId="balance">
+				<span>
+					<FormLabel># tx units</FormLabel>
+					<FormControl
+						className="CurrencyCardBalance"
+						disabled
+						autoFocus
+						type="text"
+						value={client_creditbalance}
+					/>
+				</span>
+				<span>
+					<FormLabel>Balance</FormLabel>
+					<FormControl
+						className="CurrencyCardBalance"
+						disabled
+						autoFocus
+						type="text"
+						value={client_position_string}
+					/>
+				</span>
+				<span className="CurrencyCardIconCol">
+				</span>
 
+				</FormGroup>
 
-					<FormGroup controlId="address">
-						<FormLabel>Credit Token Address</FormLabel>
-						<FormGroup className="ClaimerCardLine">
-							<FormControl
-								className="CurrencyCardAddress"
-								disabled
-								autoFocus
-								type="text"
-								value={(credittoken_address ? credittoken_address : '')}
-							/>
-							<div className="ShareIcon">
-								<TextCopyIcon
-									app={this.app}
-									text={credittoken_address}
-									message="address has been copied to clipboard"
-								/>
-							</div>
-						</FormGroup>
-					</FormGroup>
-
-					<FormGroup controlId="credit_limit">
-					<FormLabel>New limit</FormLabel>
-					<InputGroup>
-						<FormControl 
+				<FormGroup controlId="address">
+					<FormLabel>Address</FormLabel>
+					<FormGroup className="ClaimerCardLine">
+						<FormControl
+							className="CurrencyCardAddress"
+							disabled
 							autoFocus
 							type="text"
-							value={new_limit}
-							onChange={e => this.setState({new_limit: e.target.value})}
+							value={(client_address_string ? client_address_string : '')}
 						/>
-					</InputGroup>
+						<div className="ShareIcon">
+							<TextCopyIcon
+								app={this.app}
+								text={address}
+								message="address has been copied to clipboard"
+							/>
+						</div>
+					</FormGroup>
 				</FormGroup>
 
 
-				</div>
+				<FormGroup controlId="web3providerurl">
+					<FormLabel>RPC URL {(currency && currency.name ? 'for ' + currency.name : '')}</FormLabel>
+					<FormGroup className="ClaimerCardLine">
+						<FormControl
+							className="CurrencyCardAddress"
+							disabled
+							autoFocus
+							type="text"
+							value={(web3providerurl_string ? web3providerurl_string : '')}
+						/>
+						<div className="ShareIcon">
+							<TextCopyIcon
+								app={this.app}
+								text={web3providerurl}
+								message="rpc url has been copied to clipboard"
+							/>
+						</div>
+					</FormGroup>
+				</FormGroup>
 
 				<Button onClick={this.onSubmit.bind(this)} type="submit">
-				 Update credit account
+				 Top up credit card
 				</Button>
 
 			</div>
@@ -311,36 +366,34 @@ class CreditCardView extends React.Component {
 	}
 
 	renderCreditCardView() {
-		let { client_name, client_address, message_text} = this.state;
+		let { credit_balance_string,  credit_limit_string, message_text} = this.state;
 		
 		return (
 			<div className="Form">
-				<FormGroup controlId="client_name">
-					<FormLabel>Client Name</FormLabel>
-					<InputGroup>
+				<FormGroup className="CurrencyCard" controlId="balance">
+					<span>
+						<FormLabel>Balance</FormLabel>
 						<FormControl
+							className="CurrencyCardBalance"
 							disabled
 							autoFocus
 							type="text"
-							value={client_name}
+							value={credit_balance_string}
 						/>
-					</InputGroup>
-				</FormGroup>
-				<FormGroup controlId="client_address">
-					<FormLabel>Client Address</FormLabel>
-					<InputGroup>
+					</span>
+					<span>
+						<FormLabel>Limit</FormLabel>
 						<FormControl
+							className="CurrencyCardBalance"
 							disabled
 							autoFocus
 							type="text"
-							value={client_address}
+							value={credit_limit_string}
 						/>
-					</InputGroup>
+					</span>
 				</FormGroup>
 
-				<div className="Separator">&nbsp;</div>
 
-				{this.renderAccountUpdateForm()}
 
 				<div className="TextBox">
 				  {message_text}
@@ -352,12 +405,12 @@ class CreditCardView extends React.Component {
 	}
 
 	renderCreditBookView() {
-		let { currency, title, message_text} = this.state;
+		let { currency, title} = this.state;
 		
 		return (
 			<div className="Form">
 				<FormGroup controlId="title">
-				  <FormLabel>Credit Book Title</FormLabel>
+				  <FormLabel>Creditor</FormLabel>
 				  <FormControl
 					disabled
 					autoFocus
@@ -381,13 +434,23 @@ class CreditCardView extends React.Component {
 		  );
 	}
 
+	renderForm() {
+		return (
+			<div className="Form">
+				{ this.renderCreditBookView()}
+				<div className="Separator">&nbsp;</div>
+				{ this.renderCreditCardView()}
+				<div className="Separator">&nbsp;</div>
+				{ this.renderCurrencyCardView()}
+			</div>
+		  );
+	}
+
 	render() {
 		return (
 			<div className="Container">
 				<div className="Title">Credit Card View</div>
-				{ this.renderCreditBookView()}
-				<div className="Separator">&nbsp;</div>
-				{ this.renderCreditCardView()}
+				{ this.renderForm()}
 			</div>
 		  );
 	}

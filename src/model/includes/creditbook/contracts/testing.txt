@@ -1,0 +1,47 @@
+======================================================================================================
+
+deployer: 0x5B38Da6a701c568545dCfcB03FcB875f56beddC4
+owner: 0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2
+client: 0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db
+
+======================================================================================================
+** Select deployer account
+
+deploy erc20 token
+2000000000000, "USDC Coin", "USDC", 6
+
+deployed at 0x1c91347f2A44538ce62453BEBd9Aa907C662b4bD
+
+transfer to client 0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db, 400
+
+
+======================================================================================================
+
+** Select deployer account
+
+deploy credit book
+0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2, 0x1c91347f2A44538ce62453BEBd9Aa907C662b4bD, "ACME Credit Book"
+
+create client account
+"{'name': 'Client 1', 'address': '0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db'}", 0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db
+
+get token address for client 0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db
+
+create credit token with token address for 0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db
+
+
+give credit to client 1
+0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db, 400
+
+** Select client account
+
+use credit in credit token with as client 1
+0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2, 250 
+
+topup as client 1
+approve contract calling ERC20Token 0x38cB7800C3Fddb8dda074C1c650A155154924C73, 250
+topup calling CreditBook: 50
+
+
+
+

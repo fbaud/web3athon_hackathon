@@ -17,14 +17,11 @@
 			{"disabled": false, "type": "separator"},
 			{"disabled": false, "type": "link", "route": "creditbook", "label": "Create Credit Book"},
 			{"disabled": false, "type": "link", "route": "creditbooks", "label": "Credit Books"},
-			{"disabled": false, "type": "link", "route": "creditbook_grant", "label": "Grant Credit"},
 			{"disabled": false, "type": "separator"},
 			{"disabled": false, "type": "link", "route": "creditbook_bill", "label": "Bill"},
 			{"disabled": false, "type": "separator"},
-			{"disabled": false, "type": "link", "route": "creditcards", "label": "Credit Cards"},
-			{"disabled": false, "type": "link", "route": "creditcard", "label": "Create Credit Card"},
-			{"disabled": false, "type": "link", "route": "creditbook_request", "label": "Request Credit"},
-			{"disabled": false, "type": "link", "route": "creditbook_pay", "label": "Pay with Credit"}
+			{"disabled": false, "type": "link", "route": "creditcard", "label": "Associate Credit Facility"},
+			{"disabled": false, "type": "link", "route": "creditcards", "label": "Credit Cards"}
 		]
 	},
 	"homelinks": {
@@ -32,6 +29,7 @@
 			{"type":"link", "pathname": "/creditbook", "label": "Create a Credit Book"},
 			{"type":"link", "pathname": "/creditbooks", "label": "Credit Books"},
 			{"disabled": false, "type": "separator"},
+			{"type":"link", "pathname": "/creditcard", "label": "Associate a Credit Facility"},
 			{"type":"link", "pathname": "/creditcards", "label": "Credit Cards"}
 		]
 	},

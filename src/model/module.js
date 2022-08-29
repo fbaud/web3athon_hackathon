@@ -154,6 +154,7 @@ var Module = class {
 		
 		var global = this.global;
 		var _apicontrollers = this._getClientAPI();
+		var mvcpwa = this._getMvcPWAObject();
 
 		var session = await _apicontrollers.getSessionObject(sessionuuid);
 		
@@ -173,14 +174,19 @@ var Module = class {
 		let cardscheme = card.getScheme();
 		let web3providerurl = cardscheme.getWeb3ProviderUrl();
 
-		let linker = await this._getLinker(session, contractaddress, web3providerurl);
+		// get a child session on correct scheme
+		var childsession = await mvcpwa._getMonitoredCardSession(session, wallet, card);
+
+
+
+		let linker = await this._getLinker(childsession, contractaddress, web3providerurl);
 
 		// create ethereum transaction object
 		var fromaccount = card._getSessionAccountObject();
 		var from_card_scheme = card.getScheme();
 
 		var ethereumnodeaccessmodule = global.getModuleObject('ethereum-node-access');
-		var ethereumtransaction = ethereumnodeaccessmodule.getEthereumTransactionObject(session, fromaccount);
+		var ethereumtransaction = ethereumnodeaccessmodule.getEthereumTransactionObject(childsession, fromaccount);
 		
 		// fee
 		var fee = await _apicontrollers.createSchemeFee(from_card_scheme, feelevel);
@@ -791,7 +797,7 @@ var Module = class {
 				return Promise.reject('could not find session ' + sessionuuid);
 
 			// creditcard parameters to be saved
-			var {uuid, currencyuuid, carduuid, credittotken} = creditcard;
+			var {uuid, currencyuuid, carduuid, credittotken, description} = creditcard;
 	
 			if (!walletuuid) {
 				var keys = ['mypwa', 'creditcards']; 
@@ -804,7 +810,7 @@ var Module = class {
 				// with mvcmodule.putInWallet			
 			}
 		
-			var localjson = {uuid, currencyuuid, carduuid, credittotken};
+			var localjson = {uuid, currencyuuid, carduuid, credittotken, description};
 
 			localjson.savetime = Date.now();
 
@@ -978,21 +984,19 @@ var Module = class {
 		var childsession = await mvcpwa._getMonitoredSchemeSession(session, wallet, scheme);
 	
 		// get token object to access erc20 data
-		let data = {address: credittoken_addr}
-
 		var erc20credittokenobject = await scheme.getTokenObject(credittoken_addr);
 
 		// initialize
-		erc20credittokenobject._getERC20TokenContract(session);
+		erc20credittokenobject._getERC20TokenContract(childsession);
 
 		// synchronize
 		const Token = global.getModuleClass('wallet', 'Token');
-		await Token.synchronizeERC20TokenContract(session, erc20credittokenobject);
+		await Token.synchronizeERC20TokenContract(childsession, erc20credittokenobject);
 
 		// structure
 		var credit_currency = {};
 
-		credit_currency.uuid = session.guid();
+		credit_currency.uuid = childsession.guid();
 
 		credit_currency.name = "credit - " + erc20credittokenobject.getName();
 		credit_currency.symbol = erc20credittokenobject.getSymbol();
@@ -1113,6 +1117,113 @@ var Module = class {
 		creditcard_info.currencyuuid = credit_card.getXtraData('myquote').currencyuuid;
 
 		return creditcard_info;
+	}
+
+	async payWithCurrencyCreditCard(sessionuuid, walletuuid, carduuid, credittoken_addr, toaddress, amount, feelevel) {
+		if (!sessionuuid)
+			return Promise.reject('session uuid is undefined');
+		
+		if (!walletuuid)
+			return Promise.reject('wallet uuid is undefined');
+		
+		if (!carduuid)
+			return Promise.reject('card uuid is undefined');
+		
+		var global = this.global;
+		var _apicontrollers = this._getClientAPI();
+		var mvcpwa = this._getMvcPWAObject();
+
+		var session = await _apicontrollers.getSessionObject(sessionuuid);
+		
+		if (!session)
+			return Promise.reject('could not find session ' + sessionuuid);
+		
+		var wallet = await _apicontrollers.getWalletFromUUID(session, walletuuid);
+		
+		if (!wallet)
+			return Promise.reject('could not find wallet ' + walletuuid);
+		
+		var card = await wallet.getCardFromUUID(carduuid);
+		
+		if (!card)
+			return Promise.reject('could not find card ' + carduuid);
+
+
+
+		// get credit card object			
+		var credit_card = await this._createCurrencyCreditCard(session, wallet, card, credittoken_addr);
+		var credit_card_scheme = card.scheme
+
+		// use pay with credit card on credit token currency
+		var creditcurrency = await this._getCurrencyFromAddress(session, wallet, credit_card_scheme, credittoken_addr);
+
+		var txhash = mvcpwa.payAmount(sessionuuid, walletuuid, credit_card.uuid, toaddress, creditcurrency.uuid, amount, feelevel);
+
+		return txhash;
+	}
+
+	async topupCurrencyCreditCard(sessionuuid, walletuuid, carduuid, credittoken_addr, amount, feelevel) {
+		if (!sessionuuid)
+			return Promise.reject('session uuid is undefined');
+		
+		if (!walletuuid)
+			return Promise.reject('wallet uuid is undefined');
+		
+		if (!carduuid)
+			return Promise.reject('card uuid is undefined');
+		
+		var global = this.global;
+		var _apicontrollers = this._getClientAPI();
+		var mvcpwa = this._getMvcPWAObject();
+
+		var session = await _apicontrollers.getSessionObject(sessionuuid);
+		
+		if (!session)
+			return Promise.reject('could not find session ' + sessionuuid);
+		
+		var wallet = await _apicontrollers.getWalletFromUUID(session, walletuuid);
+		
+		if (!wallet)
+			return Promise.reject('could not find wallet ' + walletuuid);
+		
+		var card = await wallet.getCardFromUUID(carduuid);
+		
+		if (!card)
+			return Promise.reject('could not find card ' + carduuid);
+
+		var cardcurrency = 	mvcpwa.findCardCurrency(sessionuuid, walletuuid, carduuid);
+
+		if (!cardcurrency)
+			return Promise.reject('could not find currency for card ' + carduuid);
+
+		// use credit book to topup
+		var erc20credit = await this.fetchCreditToken(sessionuuid, walletuuid, cardcurrency.uuid, credittoken_addr);
+
+		var creditbook_addr = erc20credit.creditbook;
+
+		// get a child session on correct scheme
+		var childsession = await mvcpwa._getMonitoredCardSession(session, wallet, card);
+
+		// get credit object
+		var data = {address: creditbook_addr};
+		var creditbookobj = await this._createCreditBookObject(childsession, cardcurrency, data);
+
+		// create ethereum transaction object
+		var fromaccount = card._getSessionAccountObject();
+		var from_card_scheme = card.getScheme();
+
+		var ethereumnodeaccessmodule = global.getModuleObject('ethereum-node-access');
+		var ethereumtransaction = ethereumnodeaccessmodule.getEthereumTransactionObject(childsession, fromaccount);
+		
+		// fee
+		var fee = await _apicontrollers.createSchemeFee(from_card_scheme, feelevel);
+
+		ethereumtransaction.setGas(fee.gaslimit);
+		ethereumtransaction.setGasPrice(fee.gasPrice);
+
+		var txhash = await creditbookobj.topuCreditBalance(amount, ethereumtransaction);
+
+		return txhash;
 	}
 
 
