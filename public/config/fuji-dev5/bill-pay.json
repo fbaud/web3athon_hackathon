@@ -1,0 +1,128 @@
+{
+	"current_currency_uuid": "58f3aba5-8a0b-7dcf-1310-b401aa3bc131",
+	"currencies": {
+
+		"812d43b2-be77-efb7-f269-417aad0f3b17": {
+			"name": "cUSD on Alfajores",
+			"scheme_name": "Celo Alfajores",
+			"widget_params": {
+				"widget_url": "https://widget-hml.primusmoney.com/my-widget/v1",
+				"client_id":"248aee70-f368-cb3a-73e8-c11db997ef5c",
+				"client_key":"f3829f4a-dea8-4c60-0ca8-b6a0c5b07f28",
+				"remote_wallet_driver": "PrimusMoney",
+				"remote_wallet_url": "https://wallet-hml.primusmoney.com/my-wallet",
+				"remote_wallet_ring": "1",
+				"local_wallet_hide": true,
+				"callbackurl_off": "https://mytokens-rest.primusmoney.com/mytokens-dapp/api/callback",
+				"web3_provider_url": "https://alfajores-forno.celo-testnet.org",
+				"explorer_url": "https://alfajores-blockscout.celo-testnet.org",
+				"chainid": 44787,
+				"networkid": 44787,
+				"default_gas_limit": "84000",
+				"default_gas_price": "1000000000",
+				"avg_transaction_fee": "0.000021000",
+				"transaction_units_min": "2",
+				"tokenaddress": "0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1",
+				"strings": []
+			},
+			"currency": {
+				"symbol": "$"
+			},
+			"linker": {
+				"address": "0x76d72311413e0697684cb9E2b07fCf27D950D040",
+				"store_cost_units": 1
+			}
+		},
+		"3890d8d7-32d0-1a71-1b5d-9680a11e5a5b": {
+			"name": "cEUR on Alfajores",
+			"scheme_name": "Celo Alfajores",
+			"widget_params": {
+				"widget_url": "https://widget-hml.primusmoney.com/my-widget/v1",
+				"client_id":"248aee70-f368-cb3a-73e8-c11db997ef5c",
+				"client_key":"f3829f4a-dea8-4c60-0ca8-b6a0c5b07f28",
+				"remote_wallet_driver": "PrimusMoney",
+				"remote_wallet_url": "https://wallet-hml.primusmoney.com/my-wallet",
+				"remote_wallet_ring": "1",
+				"local_wallet_hide": true,
+				"callbackurl_off": "https://mytokens-rest.primusmoney.com/mytokens-dapp/api/callback",
+				"web3_provider_url": "https://alfajores-forno.celo-testnet.org",
+				"explorer_url": "https://alfajores-blockscout.celo-testnet.org",
+				"chainid": 44787,
+				"networkid": 44787,
+				"default_gas_limit": "84000",
+				"default_gas_price": "1000000000",
+				"avg_transaction_fee": "0.000021000",
+				"transaction_units_min": "2",
+				"tokenaddress": "0x10c892A6EC43a53E45D0B916B4b7D383B1b78C0F",
+				"strings": []
+			},
+			"currency": {
+				"symbol": "€"
+			},
+			"linker": {
+				"address": "0x76d72311413e0697684cb9E2b07fCf27D950D040",
+				"store_cost_units": 1
+			}
+		},
+		"58f3aba5-8a0b-7dcf-1310-b401aa3bc131": {
+			"name": "UCSD on Fuji",
+			"scheme_name": "Avax Fuji",
+			"widget_params": {
+				"widget_url": "https://widget-hml.primusmoney.com/my-widget/v1",
+				"client_id":"248aee70-f368-cb3a-73e8-c11db997ef5c",
+				"client_key":"f3829f4a-dea8-4c60-0ca8-b6a0c5b07f28",
+				"remote_wallet_driver": "PrimusMoney",
+				"remote_wallet_url": "https://wallet-hml.primusmoney.com/my-wallet",
+				"remote_wallet_ring": "1",
+				"local_wallet_hide": true,
+				"callbackurl_off": "https://mytokens-rest.primusmoney.com/mytokens-dapp/api/callback",
+				"web3_provider_url": "https://api.avax-test.network/ext/bc/C/rpc",
+				"explorer_url": "https://snowtrace.io",
+				"chainid": 43113,
+				"networkid": 43113,
+				"default_gas_limit": "84000",
+				"default_gas_price": "30000000000",
+				"avg_transaction_fee": "0.000021000",
+				"transaction_units_min": "10",
+				"tokenaddress": "0x1a2bC9A418cC7e93C21c8cd91a85501d5794d309",
+				"strings": []
+			},
+			"currency": {
+				"symbol": "$"
+			},
+			"linker": {
+				"address": "0x0E53E30B81140Edeb2993297dFcdb3e8C6c621d0"
+			}
+		},
+		"1a845cbe-d234-9859-5226-b15804b41a35": {
+			"name": "UCSD on Mumbai",
+			"scheme_name": "Polygon Mumbai",
+			"widget_params": {
+				"widget_url": "https://widget-hml.primusmoney.com/my-widget/v1",
+				"client_id":"248aee70-f368-cb3a-73e8-c11db997ef5c",
+				"client_key":"f3829f4a-dea8-4c60-0ca8-b6a0c5b07f28",
+				"remote_wallet_driver": "PrimusMoney",
+				"remote_wallet_url": "https://wallet-hml.primusmoney.com/my-wallet",
+				"remote_wallet_ring": "1",
+				"local_wallet_hide": true,
+				"callbackurl_off": "https://mytokens-rest.primusmoney.com/mytokens-dapp/api/callback",
+				"web3_provider_url": "https://api.avax-test.network/ext/bc/C/rpc",
+				"explorer_url": "https://snowtrace.io",
+				"chainid": 78110,
+				"networkid": 78110,
+				"default_gas_limit": "84000",
+				"default_gas_price": "50000000000",
+				"avg_transaction_fee": "0.000021000",
+				"transaction_units_min": "10",
+				"tokenaddress": "0x5EbC30fA7CA65631f16de82f647A8021b05DE1Fc",
+				"strings": []
+			},
+			"currency": {
+				"symbol": "$"
+			},
+			"linker": {
+				"address": "0xB77B895F1BB149966c5Ff1F5038cbC6397EC1457"
+			}
+		}
+	}
+}

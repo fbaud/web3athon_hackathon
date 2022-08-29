@@ -39,7 +39,7 @@ use credit in credit token with as client 1
 0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2, 250 
 
 topup as client 1
-approve contract calling ERC20Token 0x38cB7800C3Fddb8dda074C1c650A155154924C73, 250
+approve contract calling ERC20Token 0x0813d4a158d06784FDB48323344896B2B1aa0F85, 250
 topup calling CreditBook: 50
 
 

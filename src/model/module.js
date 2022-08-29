@@ -223,7 +223,63 @@ var Module = class {
 	}
 
 	//
-	// credit books
+	// Card functions
+	//
+
+	async getCardListWithAddressOnWeb3Url(sessionuuid, walletuuid, web3url, address) {
+		var global = this.global;
+		var mvcmyquote = global.getModuleObject('mvc-myquote');
+
+		var cards = await mvcmyquote.getCardListOnWeb3Url(sessionuuid, walletuuid, web3url);
+		var array = []
+
+		for (var i = 0; i < (cards ? cards.length : 0); i++) {
+			var card = cards[i];
+			var areEquals = await mvcmyquote.areAddressesEqual(sessionuuid, card.address, address);
+
+			if (areEquals)
+				array.push(card);
+		}
+
+		return array;
+	}
+
+	async getCardSchemeType(sessionuuid, walletuuid, carduuid) {
+		if (!sessionuuid)
+			return Promise.reject('session uuid is undefined');
+		
+		if (!walletuuid)
+			return Promise.reject('wallet uuid is undefined');
+		
+		if (!carduuid)
+			return Promise.reject('card uuid is undefined');
+
+
+		var _apicontrollers = this._getClientAPI();
+
+		var session = await _apicontrollers.getSessionObject(sessionuuid);
+
+		if (!session)
+			return Promise.reject('could not find session ' + sessionuuid);
+
+		var wallet = await _apicontrollers.getWalletFromUUID(session, walletuuid);
+		
+		if (!wallet)
+			return Promise.reject('could not find wallet ' + walletuuid);
+
+		var card = await wallet.getCardFromUUID(carduuid);
+
+		if (!card)
+			return Promise.reject('could not find card ' + carduuid);
+
+
+		var cardscheme = card.getScheme();
+		
+		return cardscheme.getSchemeType()
+	}
+
+	//
+	// credit books functions
 	//
 	async readCreditBooks(sessionuuid, walletuuid) {
 		if (!sessionuuid)
@@ -460,7 +516,9 @@ var Module = class {
 		return creditbook;
 	}
 
+	//
 	// credit accounts
+	//
 	async _getCreditBookObject(sessionuuid, walletuuid, carduuid, creditbookuuid) {
 		if (!sessionuuid)
 		return Promise.reject('session uuid is undefined');

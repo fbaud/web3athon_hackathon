@@ -22,9 +22,13 @@ class BillScreen extends React.Component {
 		super(props);
 		
 		this.app = this.props.app;
-		this.getMvcMyQuoteObject = this.app.getMvcMyQuoteObject;
+
+		this.getMvcMyPWAObject = this.app.getMvcMyPWAObject;
+		this.getMvcMyCreditBookObject = this.app.getMvcMyCreditBookObject;
 		
 		this.uuid = this.app.guid();
+
+		this.bill_pay_config = null;
 
 		this.widget_client_id = 'MyWidgetClient-' + this.uuid;
 
@@ -42,8 +46,14 @@ class BillScreen extends React.Component {
 			canpay: false,
 			instructions: 'Enter the amount to pay',
 			current_scheme_name: 'unknown',
-			widget_params
+			widget_params,
+			processing: false
 		};
+	}
+
+	_setState(state) {
+		if (this.closing !== true)
+		this.setState(state);
 	}
 
 	componentDidUpdate(prevProps) {
@@ -61,23 +71,49 @@ class BillScreen extends React.Component {
 
 	}
 
-	async getCurrentSchemeName() {
-		let json = await this.mvcmyquote.loadConfig('/pocs/bill-pay');
+	async getCurrentCurrencyUUID() {
+		let json = await this.mvcmypwa.loadConfig('/bill-pay');
 
-		return json.current_scheme;
+		return json.current_currency_uuid;
 	}
 
-	async getBillPayConfig() {
-		let json = await this.mvcmyquote.loadConfig('/pocs/bill-pay');
+	async getCurrentSchemeName(currencyuuid) {
+		let currency_conf =  await this.getBillPayConfig(currencyuuid);
 
-		return json.schemes[json.current_scheme];
+		return currency_conf.scheme_name;
 	}
 
-	async checkNavigationState() {
-		let mvcmyquote = this.getMvcMyQuoteObject();
+	async getBillPayConfig(currencyuuid) {
+		if (this.bill_pay_config)
+			return this.bill_pay_config;
+
+		// read json config file
+		let json = await this.mvcmypwa.loadConfig('/bill-pay');
+
+		this.bill_pay_config = json.currencies[currencyuuid];
+
+		// we fill vendor address
+		let mvcmypwa = this.getMvcMyPWAObject();
 
 		let rootsessionuuid = this.props.rootsessionuuid;
 		let walletuuid = this.props.currentwalletuuid;
+
+		let currencycard = await mvcmypwa.getCurrencyCard(rootsessionuuid, walletuuid, currencyuuid).catch(err=>{});
+
+		if (currencycard)
+		this.bill_pay_config.widget_params.vendor_address = currencycard.address;
+
+		return this.bill_pay_config;
+	}
+
+	async checkNavigationState() {
+		let mvcmypwa = this.getMvcMyPWAObject();
+
+		let rootsessionuuid = this.props.rootsessionuuid;
+		let walletuuid = this.props.currentwalletuuid;
+
+		let app_nav_state = this.app.getNavigationState();
+		let app_nav_target = app_nav_state.target;
 
 		this.checking = true;
 
@@ -88,16 +124,28 @@ class BillScreen extends React.Component {
 			});
 
 			if (!unlocked) {
-				// we open the default device wallet
-				let devicewallet = await this.app.openDeviceWallet()
-				.catch(err => {
-				});
-	
-				walletuuid = devicewallet.uuid;
+				let params = (app_nav_target ? app_nav_target.params : null);
+				this.app.gotoRoute('login', params);
+				return;
 			}
+			else {
+				// check it is not the device wallet, because we need a safer wallet
+				let isdevicewallet = await this.app.isDeviceWallet();
+				
+				if (isdevicewallet) {
+					await this.app.resetWallet();
+					
+				let params = (app_nav_target ? app_nav_target.params : null);
+				this.app.gotoRoute('login', params);
+				return;
+				}
+			}
+
+
+			let currencyuuid = await this.getCurrentCurrencyUUID();
 						
-			let billpay_config = await this.getBillPayConfig();
-			let current_scheme_name = await this.getCurrentSchemeName();
+			let billpay_config = await this.getBillPayConfig(currencyuuid);
+			let current_scheme_name = await this.getCurrentSchemeName(currencyuuid);
 
 			let currency_symbol = billpay_config.currency.symbol
 
@@ -124,27 +172,6 @@ class BillScreen extends React.Component {
 
 	}
 	
-	getMvcMyPocs() {
-		if ( typeof window !== 'undefined' && typeof window.GlobalClass !== 'undefined' && window.GlobalClass ) {
-			var _GlobalClass = window.GlobalClass;
-		}
-		else if (typeof window !== 'undefined') {
-			var _GlobalClass = ( window && window.simplestore && window.simplestore.Global ? window.simplestore.Global : null);
-		}
-		else if (typeof global !== 'undefined') {
-			// we are in node js
-			var _GlobalClass = ( global && global.simplestore && global.simplestore.Global ? global.simplestore.Global : null);
-		}
-	
-		if (_GlobalClass) {
-			var global = _GlobalClass.getGlobalObject();
-
-			return global.getModuleObject('mvc-mypocs');
-		}
-		
-	}
-	
-
 	
 	async onWidgetLoaded(ev) {
 		console.log('onWidgetLoaded called');
@@ -152,8 +179,8 @@ class BillScreen extends React.Component {
 		try {
 			let billpay_config = await this.getBillPayConfig();
 
-			let mvcmyquote = this.getMvcMyQuoteObject();
-			var mvcmypocs = this.getMvcMyPocs();
+			let mvcmypwa = this.getMvcMyPWAObject();
+			var mvcmycreditbook = this.getMvcMyCreditBookObject();
 
 			let rootsessionuuid = this.props.rootsessionuuid;
 			let walletuuid = this.props.currentwalletuuid;
@@ -183,7 +210,7 @@ class BillScreen extends React.Component {
 			// we keep asking the linker contract if a transaction hash has been linked to our bill hash
 			let web3_provider_url = billpay_config.widget_params.web3_provider_url;
 			let linkercontractaddress = billpay_config.linker.address;
-			let tx_hash = await mvcmypocs.retrieveLinkerValue(rootsessionuuid, linkercontractaddress, web3_provider_url, this.bill_tx_hash);
+			let tx_hash = await mvcmycreditbook.retrieveLinkerValue(rootsessionuuid, linkercontractaddress, web3_provider_url, this.bill_tx_hash);
 
 			let max_loops = 120; // 120 loops = 4 minutes
 			let loop = 0;
@@ -193,7 +220,7 @@ class BillScreen extends React.Component {
 				await this.app.sleep(lapse); // wait 2 s
 
 				// ask order
-				tx_hash = await mvcmypocs.retrieveLinkerValue(rootsessionuuid, linkercontractaddress, web3_provider_url, this.bill_tx_hash);
+				tx_hash = await mvcmycreditbook.retrieveLinkerValue(rootsessionuuid, linkercontractaddress, web3_provider_url, this.bill_tx_hash);
 
 				loop++;
 				if (loop > max_loops) break;
@@ -254,12 +281,15 @@ class BillScreen extends React.Component {
 	
 	async onSubmit() {
 		console.log('BillScreen.onSubmit pressed!');
+
+		this._setState({processing: true});
+
  
 		try {
 			let billpay_config = await this.getBillPayConfig();
 
-			let mvcmyquote = this.getMvcMyQuoteObject();
-			var mvcmypocs = this.getMvcMyPocs();
+			let mvcmypwa = this.getMvcMyPWAObject();
+			var mvcmycreditbook = this.getMvcMyCreditBookObject();
 
 			let rootsessionuuid = this.props.rootsessionuuid;
 			let walletuuid = this.props.currentwalletuuid;
@@ -271,11 +301,11 @@ class BillScreen extends React.Component {
 			// find a card with this address capable of transacting on this web3provider
 			// whatever the exact scheme
 			var current_card;
-			var cards = await mvcmypocs.getCardListWithAddressOnWeb3Url(rootsessionuuid, walletuuid, web3_provider_url, card_address).catch(err => {});
+			var cards = await mvcmycreditbook.getCardListWithAddressOnWeb3Url(rootsessionuuid, walletuuid, web3_provider_url, card_address).catch(err => {});
 
 			// we then pick the first card that is on a local scheme
 			for (var i = 0; i < (cards ? cards.length : 0); i++) {
-				var cardschemetype = await mvcmypocs.getCardSchemeType(rootsessionuuid, walletuuid, cards[i].uuid);
+				var cardschemetype = await mvcmycreditbook.getCardSchemeType(rootsessionuuid, walletuuid, cards[i].uuid);
 
 				if (cardschemetype === 0) {
 					current_card = cards[i];
@@ -285,6 +315,7 @@ class BillScreen extends React.Component {
 
 			if (!current_card) {
 				this.app.alert('could not find a card with address ' + card_address + ' web3 provider ' + web3_provider_url);
+				this._setState({processing: false});
 				return;
 			}
 
@@ -298,7 +329,32 @@ class BillScreen extends React.Component {
 			let assignto = current_card.address; // not really used here
 			let dataobj = {web3url, to, tokenaddress, amount};
 
-			var tx_hash = await mvcmyquote.registerTransaction(rootsessionuuid, walletuuid, current_card.uuid, dataobj, assignto);
+			// check we have enough transaction credits
+			let tx_fee = {};
+			tx_fee.transferred_credit_units = 0;
+			let create_account_cost_units = 55;
+			tx_fee.estimated_cost_units = create_account_cost_units;
+
+			// need a higher feelevel than standard this.app.getCurrencyFeeLevel(currencyuuuid)
+			let _feelevel = await mvcmypwa.getRecommendedFeeLevel(rootsessionuuid, walletuuid, current_card.uuid, tx_fee);
+
+			var canspend = await mvcmypwa.canCompleteTransaction(rootsessionuuid, walletuuid, current_card.uuid, tx_fee, _feelevel).catch(err => {});
+	
+			if (!canspend) {
+				if (tx_fee.estimated_fee.execution_credits > tx_fee.estimated_fee.max_credits) {
+					this.app.alert('The execution of this transaction is too large: ' + tx_fee.estimated_fee.execution_units + ' credit units.');
+					this._setState({processing: false});
+					return;
+				}
+				else {
+					this.app.alert('You must add transaction units to the source card. You need at least ' + tx_fee.required_units + ' credit units.');
+					this._setState({processing: false});
+					return;
+				}
+			}
+			
+
+			var tx_hash = await mvcmypwa.registerTransaction(rootsessionuuid, walletuuid, current_card.uuid, dataobj, assignto, _feelevel);
 			this.bill_tx_hash = tx_hash;
 
 			// create widget to display the QR Code
@@ -341,12 +397,21 @@ class BillScreen extends React.Component {
 
 
 			this.setState({widget_params, canpay: true, instructions: 'Present this QRCode to the payer'});
+
+			this._setState({processing: false});
+	
+			return true;
 	
 		}
 		catch(e) {
 			console.log('exception in BillScreen.onSubmit: '+ e);
 			this.app.error('exception in BillScreen.onSubmit: '+ e);
+
+			this._setState({processing: false});
 		}
+
+
+		return false;
 	}
 
 	renderBill() {
