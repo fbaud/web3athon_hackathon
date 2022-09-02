@@ -1149,7 +1149,7 @@ var Module = class {
 		if (!card)
 			return Promise.reject('could not find card ' + carduuid);
 
-		var cardcurrency = 	mvcpwa.findCardCurrency(sessionuuid, walletuuid, carduuid);
+		var cardcurrency = 	await mvcpwa.findCardCurrency(sessionuuid, walletuuid, carduuid);
 
 		if (!cardcurrency)
 			return Promise.reject('could not find currency for card ' + carduuid);
@@ -1179,7 +1179,34 @@ var Module = class {
 		ethereumtransaction.setGas(fee.gaslimit);
 		ethereumtransaction.setGasPrice(fee.gasPrice);
 
-		var txhash = await creditbookobj.topuCreditBalance(amount, ethereumtransaction);
+		// we first approve creditbook contract to let creditbookobj spend amount
+
+		// get token object to access erc20 data
+		var erc20credittokenobject = await from_card_scheme.getTokenObject(cardcurrency.address);
+
+		// initialize
+		erc20credittokenobject._getERC20TokenContract(childsession);
+
+		// synchronize
+		const Token = global.getModuleClass('wallet', 'Token');
+		await Token.synchronizeERC20TokenContract(childsession, erc20credittokenobject);
+
+		// erc20 contract
+		var erc20contract = erc20credittokenobject._getERC20TokenContract(childsession);
+
+		var alloweeaccount = childsession.createBlankAccountObject();
+		alloweeaccount.setAddress(creditbook_addr);
+		var payingaccount = card._getAccountObject();
+		var gas = fee.gaslimit;
+		var gasPrice = fee.gasPrice;
+
+		var txhash = await erc20contract.approve(alloweeaccount, amount, payingaccount, gas, gasPrice);
+
+		if (!txhash)
+			return Promise.reject('could not approve credit book contract as spender for token ' + cardcurrency.address);
+
+		// then let creditbook do the top up
+		var txhash = await creditbookobj.topupCreditBalance(amount, ethereumtransaction);
 
 		return txhash;
 	}

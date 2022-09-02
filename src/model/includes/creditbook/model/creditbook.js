@@ -298,7 +298,7 @@ var CreditBook = class extends SmartContractClass {
 		return contractinterface.updateCreditLimit(client_address, new_limit, ethtx);
 	}
 	
-	async topuCreditBalance(amount, ethtx) {
+	async topupCreditBalance(amount, ethtx) {
 		var contractinterface = this.getContractInterface();
 
 		return contractinterface.topupCredits(amount, ethtx);

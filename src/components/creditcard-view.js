@@ -223,7 +223,7 @@ class CreditCardView extends React.Component {
 			// check we have enough transaction credits
 			let tx_fee = {};
 			tx_fee.transferred_credit_units = 0;
-			let topup_cost_units = 3;
+			let topup_cost_units = 10;
 			tx_fee.estimated_cost_units = topup_cost_units;
 
 			let _feelevel = await mvcmypwa.getRecommendedFeeLevel(rootsessionuuid, walletuuid, clientcard.uuid, tx_fee);

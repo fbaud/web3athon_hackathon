@@ -39,6 +39,7 @@ class PayScreen extends React.Component {
 			instructions: 'Do you want to proceed?',
 			canpaycredit: null,
 			wantpaycredit: null,
+			currentcard: null,
 			current_scheme_name: 'unknown',
 			widget_params: null
 		};
@@ -254,6 +255,9 @@ class PayScreen extends React.Component {
 			let current_scheme_name = await this.getCurrentSchemeName(currencyuuid);
 			let canpaycredit = false;
 
+			// get currency card for this currency
+			let currentcard = await mvcmypwa.getCurrencyCard(rootsessionuuid, walletuuid, currencyuuid).catch(err=>{});
+
 			// look if we have a credit card for this currency and this vendor
 			let erc20credit = await mvcmycreditbook.findCreditToken(rootsessionuuid, walletuuid, currencyuuid, to_address).catch(err => {});
 
@@ -267,7 +271,7 @@ class PayScreen extends React.Component {
 				await this.buildWidgetParams();
 			}
 
-			this.setState({current_scheme_name, canpaycredit});
+			this.setState({current_scheme_name, canpaycredit, currentcard});
 
 		}
 		catch(e) {
@@ -310,6 +314,31 @@ class PayScreen extends React.Component {
 			let version_info = await widget_client.getWidgetVersionInfo();
 	
 			console.log('version info is: ' + JSON.stringify(version_info));
+
+			// set card inside the widget
+	
+			const {currentcard} = this.state;
+			debugger;
+
+			let widget_address = await  widget_client.doChangeCurrentCard(currentcard.address);
+
+			if (!widget_address) {
+				let mvcmypwa = this.getMvcMyPWAObject();
+				var mvcmycreditbook = this.getMvcMyCreditBookObject();
+		
+				let rootsessionuuid = this.props.rootsessionuuid;
+				let walletuuid = this.props.currentwalletuuid;
+		
+				const card_private_key = await mvcmypwa.getCardPrivateKey(rootsessionuuid, walletuuid, currentcard.uuid);
+
+				let res = await widget_client.doAddCard(currentcard.address, card_private_key);
+
+				if (!res)
+					this.app.alert('could not add card to widget');
+
+				widget_address = await  widget_client.doChangeCurrentCard(currentcard.address);
+			}
+
 		}
 		catch(e) {
 			console.log('exception in onWidgetLoaded: ' + e);
