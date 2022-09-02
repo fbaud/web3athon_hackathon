@@ -66,7 +66,7 @@ class CreditCardListView extends React.Component {
 			for (var i = 0; i < creditcards.length; i++) {
 				let creditcard = creditcards[i];
 
-				let item = {uuid: creditcard.uuid};
+				let item = {uuid: creditcard.uuid, description: creditcard.description};
 
 				item.formattedtime = mvcmypwa.formatDate(creditcard.savetime/1000, 'YYYY-mm-dd HH:MM:SS');
 
@@ -112,7 +112,7 @@ class CreditCardListView extends React.Component {
 		let uuid = item.uuid;
 
 		let time = item.formattedtime;
-		let description = mvcmypwa.fitString(item.uuid, 21);
+		let description = mvcmypwa.fitString(item.description, 21);
 
 		return (
 			<tr key={uuid} onClick={() => this.onClickItem(item)}>

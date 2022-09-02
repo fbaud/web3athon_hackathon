@@ -28,6 +28,11 @@ class BillScreen extends React.Component {
 		
 		this.uuid = this.app.guid();
 
+		//this.paybill_route = '#/paybill_pay';
+		this.paybill_route = 'creditbookpay';
+		this.paybill_path = ''; //'#/creditbook_pay';
+			// path must be blank if we use route
+
 		this.bill_pay_config = null;
 
 		this.widget_client_id = 'MyWidgetClient-' + this.uuid;
@@ -72,6 +77,12 @@ class BillScreen extends React.Component {
 	}
 
 	async getCurrentCurrencyUUID() {
+		let app_nav_state = this.app.getNavigationState();
+		let app_nav_target = app_nav_state.target;
+
+		// TODO: find currency uuid from params
+		let params = (app_nav_target ? app_nav_target.params : null);
+
 		let json = await this.mvcmypwa.loadConfig('/bill-pay');
 
 		return json.current_currency_uuid;
@@ -362,7 +373,9 @@ class BillScreen extends React.Component {
 			let my_widget_client = My_Widget_Client.getObject();
 	
 			let _payurl = await this.app.getCleanUrl();
-			_payurl += '#/paybill_pay';
+			_payurl += this.paybill_path;
+
+			let _payroute = this.paybill_route;
 
 			let widget_params = {};
 
@@ -373,6 +386,7 @@ class BillScreen extends React.Component {
 			widget_params.client_key = billpay_config.widget_params.client_key;
 			widget_params.remote_wallet_driver = billpay_config.widget_params.remote_wallet_driver;
 			widget_params.remote_wallet_url = _payurl;
+			widget_params.remote_wallet_route = _payroute;
 			widget_params.remote_wallet_ring = billpay_config.widget_params.remote_wallet_ring;
 			widget_params.local_wallet_hide = billpay_config.widget_params.local_wallet_hide;
 			widget_params.web3_provider_url = billpay_config.widget_params.web3_provider_url;
@@ -454,7 +468,7 @@ class BillScreen extends React.Component {
 				<div className="Dev-Info">{( this.app.exec_env === 'dev' ? 'Working on scheme ' + this.state.current_scheme_name : '')}</div>
 
 			</div>
-		);		
+		);
 	}
 	
 	render() {

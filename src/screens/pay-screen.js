@@ -17,13 +17,16 @@ class PayScreen extends React.Component {
 		super(props);
 		
 		this.app = this.props.app;
-		this.getMvcMyQuoteObject = this.app.getMvcMyQuoteObject;
+
+		this.getMvcMyPWAObject = this.app.getMvcMyPWAObject;
+		this.getMvcMyCreditBookObject = this.app.getMvcMyCreditBookObject;
 		
+
 		this.uuid = this.app.guid();
 
 		this.widget_client_id = 'MyWidgetClient-' + this.uuid;
 
-		let widget_params = null;
+		this.currencyuuid = null;
 	
 		this.checking = false;
 
@@ -34,34 +37,19 @@ class PayScreen extends React.Component {
 
 		this.state = {
 			instructions: 'Do you want to proceed?',
+			canpaycredit: null,
+			wantpaycredit: null,
 			current_scheme_name: 'unknown',
-			widget_params
+			widget_params: null
 		};
 	}
 	
-	getMvcMyPocs() {
-		if ( typeof window !== 'undefined' && typeof window.GlobalClass !== 'undefined' && window.GlobalClass ) {
-			var _GlobalClass = window.GlobalClass;
-		}
-		else if (typeof window !== 'undefined') {
-			var _GlobalClass = ( window && window.simplestore && window.simplestore.Global ? window.simplestore.Global : null);
-		}
-		else if (typeof global !== 'undefined') {
-			// we are in node js
-			var _GlobalClass = ( global && global.simplestore && global.simplestore.Global ? global.simplestore.Global : null);
-		}
-	
-		if (_GlobalClass) {
-			var global = _GlobalClass.getGlobalObject();
-
-			return global.getModuleObject('mvc-mypocs');
-		}
-		
-	}
-	
-
-	componentDidUpdate(prevProps) {
+	componentDidUpdate(prevProps, prevState) {
 		console.log('PayScreen.componentDidUpdate called');
+
+		if (this.state.wantpaycredit != prevState.wantpaycredit) {
+			this.buildWidgetParams();
+		}
 	}
 
 	componentDidMount() {
@@ -108,31 +96,110 @@ class PayScreen extends React.Component {
 		return queryparams;
 	}
 
-	async checkNavigationState() {
-		this.checking = true;
+	async buildWidgetParams() {
+		const {canpaycredit, wantpaycredit} = this.state;
 
-		try {
-			let mvcmyquote = this.getMvcMyQuoteObject();
-			var mvcmypocs = this.getMvcMyPocs();
+		let currencyuuid = this.currencyuuid;
+		let billpay_config = await this.getBillPayConfig(currencyuuid);
+
+		// read parameters in the query string
+		let queryparams = this._getQueryParameters();
+
+		let web3_provider_url = (queryparams.web3url ? this.app.decodebase64(queryparams.web3url) : null);
+		let tokenaddress = queryparams.tokenaddress;
+		let amount = queryparams.amount;
+		let to_address = queryparams.to;
+
+		if ((canpaycredit === true) && (wantpaycredit === true)) {
+			// we change the token address to use the credit token address
+			let mvcmypwa = this.getMvcMyPWAObject();
+			var mvcmycreditbook = this.getMvcMyCreditBookObject();
 	
 			let rootsessionuuid = this.props.rootsessionuuid;
 			let walletuuid = this.props.currentwalletuuid;
+	
+			let erc20credit = await mvcmycreditbook.findCreditToken(rootsessionuuid, walletuuid, currencyuuid, to_address).catch(err => {});
 
+			tokenaddress = erc20credit.address;
+		}
+
+		// build our widget params for payment
+		let widget_params = {};
+
+		// from config
+		widget_params.widget = 'pay';
+		widget_params.widget_url = billpay_config.widget_params.widget_url;
+		widget_params.client_id = billpay_config.widget_params.client_id;
+		widget_params.client_key = billpay_config.widget_params.client_key;
+
+		widget_params.remote_wallet_driver = billpay_config.widget_params.remote_wallet_driver;
+		widget_params.remote_wallet_url = billpay_config.widget_params.remote_wallet_url;
+		widget_params.remote_wallet_ring = billpay_config.widget_params.remote_wallet_ring;
+		widget_params.local_wallet_hide = billpay_config.widget_params.local_wallet_hide;
+		widget_params.explorer_url = billpay_config.widget_params.explorer_url;
+
+		widget_params.default_gas_limit = billpay_config.widget_params.default_gas_limit;
+		widget_params.default_gas_price = billpay_config.widget_params.default_gas_price;
+		widget_params.avg_transaction_fee = billpay_config.widget_params.avg_transaction_fee;
+		widget_params.transaction_units_min = billpay_config.widget_params.transaction_units_min;
+
+		widget_params.strings = billpay_config.widget_params.strings;
+
+		// dynamic
+		widget_params.web3_provider_url = web3_provider_url;
+		widget_params.tokenaddress = tokenaddress;
+		widget_params.amount = amount;
+		widget_params.to_address = to_address;
+
+		this.setState({widget_params});
+
+	}
+
+	async checkNavigationState() {
+		let mvcmypwa = this.getMvcMyPWAObject();
+		var mvcmycreditbook = this.getMvcMyCreditBookObject();
+
+		let rootsessionuuid = this.props.rootsessionuuid;
+		let walletuuid = this.props.currentwalletuuid;
+
+		let app_nav_state = this.app.getNavigationState();
+		let app_nav_target = app_nav_state.target;
+
+		this.checking = true;
+
+		try {
 			// check wallet is unlocked
 			let unlocked = await this.app.checkWalletUnlocked()
 			.catch(err => {
 			});
 
 			if (!unlocked) {
-				// we open the default device wallet
-				let devicewallet = await this.app.openDeviceWallet()
-				.catch(err => {
-				});
-	
-				walletuuid = devicewallet.uuid;
+				let params = (app_nav_target ? app_nav_target.params : null);
+				this.app.gotoRoute('login', params);
+				return;
 			}
+			else {
+				// check it is not the device wallet, because we need a safer wallet
+				let isdevicewallet = await this.app.isDeviceWallet();
+				
+				if (isdevicewallet) {
+					await this.app.resetWallet();
+					
+				let params = (app_nav_target ? app_nav_target.params : null);
+				this.app.gotoRoute('login', params);
+				return;
+				}
+			}
+
 			
+			if (app_nav_target && (app_nav_target.route == 'creditbook_pay') && (app_nav_target.reached == false)) {
+
+				// mark target as reached
+				app_nav_target.reached = true;
+			}
+
 	
+		
 			let My_Widget_Client = require('@primusmoney/my_widget_react_client');
 			let my_widget_client = My_Widget_Client.getObject();
 
@@ -154,54 +221,53 @@ class PayScreen extends React.Component {
 			// get scheme
 			this.bill_web3_provider_url = web3_provider_url;
 			let options = {}; // no other requirement on ethnodeserverconfig
-			let scheme = await mvcmyquote.findLocalSchemeInfoFromWeb3Url(rootsessionuuid, web3_provider_url, options)
+			let scheme = await mvcmypwa.findLocalSchemeInfoFromWeb3Url(rootsessionuuid, web3_provider_url, options)
 			.catch(err => {
 				console.log('error in PayScreen.checkNavigationState: ' + err);
 			});
 
 			if (!scheme) {
 				// no scheme yet for this web3url, we build a local one
-				scheme = await mvcmypocs.buildSchemeFromWeb3Url(rootsessionuuid, walletuuid, web3_provider_url, options);
+				scheme = await mvcmycreditbook.buildSchemeFromWeb3Url(rootsessionuuid, walletuuid, web3_provider_url, options);
 			}
 
 			// let's read the bill on the blockchain
 						
-			let dataobj = (this.bill_tx_hash ? await mvcmyquote.fetchTransaction(rootsessionuuid, walletuuid, scheme.uuid, this.bill_tx_hash).catch(err => {}) : null);
+			let dataobj = (this.bill_tx_hash ? await mvcmypwa.fetchTransaction(rootsessionuuid, walletuuid, scheme.uuid, this.bill_tx_hash).catch(err => {}) : null);
 
 			// we also could check in the linker if the payment has not already been done
 	
-			let billpay_config = await this.getBillPayConfig();
-			let current_scheme_name = await this.getCurrentSchemeName();
+			// currency that is referenced
+			let currencyuuid;
 
-			// build our widget params for payment
-			let widget_params = {};
+			let currencies = await mvcmypwa.getCurrenciesFromAddress(rootsessionuuid, walletuuid, scheme.uuid, tokenaddress);
 
-			// from config
-			widget_params.widget = 'pay';
-			widget_params.widget_url = billpay_config.widget_params.widget_url;
-			widget_params.client_id = billpay_config.widget_params.client_id;
-			widget_params.client_key = billpay_config.widget_params.client_key;
+			if (!currencies || (currencies.length == 0))
+				return Promise.reject('could not find currency for ' + tokenaddress);
+			else if (currencies.length > 1)
+				console.log('Warning: more than one currency with address' + tokenaddress);
 
-			widget_params.remote_wallet_driver = billpay_config.widget_params.remote_wallet_driver;
-			widget_params.remote_wallet_url = billpay_config.widget_params.remote_wallet_url;
-			widget_params.remote_wallet_ring = billpay_config.widget_params.remote_wallet_ring;
-			widget_params.local_wallet_hide = billpay_config.widget_params.local_wallet_hide;
-			widget_params.explorer_url = billpay_config.widget_params.explorer_url;
+			currencyuuid = currencies[0].uuid;
 
-			widget_params.default_gas_limit = billpay_config.widget_params.default_gas_limit;
-			widget_params.default_gas_price = billpay_config.widget_params.default_gas_price;
-			widget_params.avg_transaction_fee = billpay_config.widget_params.avg_transaction_fee;
-			widget_params.transaction_units_min = billpay_config.widget_params.transaction_units_min;
+			this.currencyuuid = currencyuuid;
+						
+			let current_scheme_name = await this.getCurrentSchemeName(currencyuuid);
+			let canpaycredit = false;
 
-			widget_params.strings = billpay_config.widget_params.strings;
-	
-			// dynamic
-			widget_params.web3_provider_url = web3_provider_url;
-			widget_params.tokenaddress = tokenaddress;
-			widget_params.amount = amount;
-			widget_params.to_address = to_address;
+			// look if we have a credit card for this currency and this vendor
+			let erc20credit = await mvcmycreditbook.findCreditToken(rootsessionuuid, walletuuid, currencyuuid, to_address).catch(err => {});
 
-			this.setState({current_scheme_name, widget_params});
+			if (erc20credit) {
+				// display possibility to pay on credit
+				canpaycredit = true;
+			}
+
+
+			if (canpaycredit === false){
+				await this.buildWidgetParams();
+			}
+
+			this.setState({current_scheme_name, canpaycredit});
 
 		}
 		catch(e) {
@@ -224,8 +290,6 @@ class PayScreen extends React.Component {
 		this.app.removeWindowEventListener('widget_on_pay', this.uuid);
 
 	}
-
-
 
 	
 	async onWidgetLoaded(ev) {
@@ -252,16 +316,22 @@ class PayScreen extends React.Component {
 		}
 	}
 
-	async getCurrentSchemeName() {
-		let json = await this.mvcmyquote.loadConfig('/pocs/bill-pay');
+	async getCurrentSchemeName(currencyuuid) {
+		let currency_conf =  await this.getBillPayConfig(currencyuuid);
 
-		return json.current_scheme;
+		return currency_conf.scheme_name;
 	}
 
-	async getBillPayConfig() {
-		let json = await this.mvcmyquote.loadConfig('/pocs/bill-pay');
+	async getBillPayConfig(currencyuuid) {
+		if (this.bill_pay_config)
+			return this.bill_pay_config;
 
-		return json.schemes[json.current_scheme];
+		// read json config file
+		let json = await this.mvcmypwa.loadConfig('/bill-pay');
+
+		this.bill_pay_config = json.currencies[currencyuuid];
+
+		return this.bill_pay_config;
 	}
 
 	async widget_on_pay(ev) {	
@@ -271,8 +341,8 @@ class PayScreen extends React.Component {
 		try {
 			let billpay_config = await this.getBillPayConfig();
 
-			let mvcmyquote = this.getMvcMyQuoteObject();
-			var mvcmypocs = this.getMvcMyPocs();
+			let mvcmypwa = this.getMvcMyPWAObject();
+			var mvcmycreditbook = this.getMvcMyCreditBookObject();
 
 			let rootsessionuuid = this.props.rootsessionuuid;
 			let walletuuid = this.props.currentwalletuuid;
@@ -304,11 +374,11 @@ class PayScreen extends React.Component {
 					// find a card with this address capable of transacting on this web3provider
 					// whatever the exact scheme
 					var current_card;
-					var cards = await mvcmypocs.getCardListWithAddressOnWeb3Url(rootsessionuuid, walletuuid, web3_provider_url, card_address).catch(err => {});
+					var cards = await mvcmycreditbook.getCardListWithAddressOnWeb3Url(rootsessionuuid, walletuuid, web3_provider_url, card_address).catch(err => {});
 	
 					// we then pick the first card that is on a local scheme
 					for (var i = 0; i < (cards ? cards.length : 0); i++) {
-						var cardschemetype = await mvcmypocs.getCardSchemeType(rootsessionuuid, walletuuid, cards[i].uuid);
+						var cardschemetype = await mvcmycreditbook.getCardSchemeType(rootsessionuuid, walletuuid, cards[i].uuid);
 	
 						if (cardschemetype === 0) {
 							current_card = cards[i];
@@ -330,9 +400,9 @@ class PayScreen extends React.Component {
 					let link_store_cost_units = (linker_config.store_cost_units ? parseInt(linker_config.store_cost_units) : 1);
 					tx_fee.estimated_cost_units = link_store_cost_units;
 	
-					let _feelevel = await mvcmyquote.getRecommendedFeeLevel(rootsessionuuid, walletuuid, current_card.uuid, tx_fee);
+					let _feelevel = await mvcmypwa.getRecommendedFeeLevel(rootsessionuuid, walletuuid, current_card.uuid, tx_fee);
 	
-					let result = await mvcmypocs.storeLinkerValue(rootsessionuuid, walletuuid, current_card.uuid, linkercontractaddress, this.bill_tx_hash, tx_hash, _feelevel)
+					let result = await mvcmycreditbook.storeLinkerValue(rootsessionuuid, walletuuid, current_card.uuid, linkercontractaddress, this.bill_tx_hash, tx_hash, _feelevel)
 					.catch(err => {
 						this.app.error('error signaling payment: ' + err);
 					});
@@ -373,9 +443,6 @@ class PayScreen extends React.Component {
 						widget_client.refreshWidget();
 	
 					}
-	
-
-
 
 				}
 			}
@@ -387,17 +454,19 @@ class PayScreen extends React.Component {
 		}
 	}
 	
-	async onSubmit() {
-		console.log('PayScreen.onSubmit pressed!');
+	async onChooseCash() {
+		console.log('PayScreen.onChooseCash pressed!');
 
-		let My_Widget_Client = require('@primusmoney/my_widget_react_client');
-		let my_widget_client = My_Widget_Client.getObject();
-
- 
-		this.app.alert('Submit clicked');
+		this.setState({wantpaycredit: false});
 	}
 
-	renderDataForm() {
+	async onChooseCredit() {
+		console.log('PayScreen.onChooseCash pressed!');
+
+		this.setState({wantpaycredit: true});
+	}
+
+	renderPayForm() {
 		return (
 			<div className="Container">
 				<div className="Instructions">{this.state.instructions}</div>
@@ -412,6 +481,42 @@ class PayScreen extends React.Component {
 				<div className="Dev-Info">{( this.app.exec_env === 'dev' ? 'Working on scheme ' + this.state.current_scheme_name : '')}</div>
 			</div>
 		);		
+	}
+
+	renderDataForm() {
+		const {canpaycredit, wantpaycredit} = this.state;
+
+		if ((canpaycredit === true) && (wantpaycredit === null)) {
+			return (
+				<div className="Container">
+					<div className="Instructions">Do you want to pay with your credit?</div>
+					<div>
+						<span>
+						<Button className={'PaymentMethod-Button'} onClick={this.onChooseCash.bind(this)} type="submit">
+							Cash
+						</Button>
+						</span>
+						<span>
+						<Button className={'PaymentMethod-Button'} onClick={this.onChooseCredit.bind(this)} type="submit">
+							Credit
+						</Button>
+						</span>
+
+					</div>
+					<div className="Dev-Info">{( this.app.exec_env === 'dev' ? 'Working on scheme ' + this.state.current_scheme_name : '')}</div>
+	
+				</div>
+			);
+		}
+		else {
+			// payment widget has been set
+			return (
+				<>
+				{this.renderPayForm()}
+				</>
+			);
+		}
+
 	}
 	
 	render() {

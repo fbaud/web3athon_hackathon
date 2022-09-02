@@ -83,7 +83,7 @@ var Module = class {
 		var global = this.global;
 		var session = params[0];
 		
-		var ethnodemodule = global.getModuleObject('ethnode');
+/* 		var ethnodemodule = global.getModuleObject('ethnode');
 		
 		var contracts = ethnodemodule.getContractsObject(session);
 		
@@ -94,7 +94,7 @@ var Module = class {
 		// force refresh of list
 		ethnodemodule.getContractsObject(session, true);
 		result.push({module: this.name, handled: true});
-		
+		 */
 		return true;
 	}
 
@@ -221,6 +221,19 @@ var Module = class {
 
 		return value;
 	}
+
+	//
+	// Scheme functions
+	//
+
+	async buildSchemeFromWeb3Url(sessionuuid, walletuuid, web3url, options) {
+		var global = this.global;
+		var mvcclientwalletmodule = global.getModuleObject('mvc-client-wallet');
+		return mvcclientwalletmodule.buildSchemeFromWeb3Url(sessionuuid, walletuuid, web3url, options);
+	}
+
+
+
 
 	//
 	// Card functions
@@ -855,7 +868,8 @@ var Module = class {
 				return Promise.reject('could not find session ' + sessionuuid);
 
 			// creditcard parameters to be saved
-			var {uuid, currencyuuid, carduuid, credittotken, description} = creditcard;
+			var {uuid, currencyuuid, carduuid, credittotken,
+				creditor, creditbook, description} = creditcard;
 	
 			if (!walletuuid) {
 				var keys = ['mypwa', 'creditcards']; 
@@ -868,7 +882,8 @@ var Module = class {
 				// with mvcmodule.putInWallet			
 			}
 		
-			var localjson = {uuid, currencyuuid, carduuid, credittotken, description};
+			var localjson = {uuid, currencyuuid, carduuid, credittotken, // necessary
+								creditor, creditbook, description}; // usefull to speed up operations
 
 			localjson.savetime = Date.now();
 
@@ -899,121 +914,6 @@ var Module = class {
 				return creditcards[i];
 		}
 		
-	}
-
-	async _createERC20CreditObject(session, data) {
-		// for local contract objects (before deployment)
-		var global = this.global;
-		var creditbookmodule = global.getModuleObject('creditbook');
-
-		var erc20credit = await creditbookmodule.createERC20CreditObject(session, data);
-
-		return erc20credit;
-	}
-
-	async fetchCreditToken(sessionuuid, walletuuid, currencyuuid, credittoken_addr) {
-		if (!sessionuuid)
-		return Promise.reject('session uuid is undefined');
-	
-		if (!walletuuid)
-			return Promise.reject('wallet uuid is undefined');
-
-		if (!currencyuuid)
-			return Promise.reject('currency uuid is undefined');
-
-		var global = this.global;
-		var _apicontrollers = this._getClientAPI();
-		var mvcpwa = this._getMvcPWAObject();
-	
-		var session = await _apicontrollers.getSessionObject(sessionuuid);
-		
-		if (!session)
-			return Promise.reject('could not find session ' + sessionuuid);
-
-		var wallet = await _apicontrollers.getWalletFromUUID(session, walletuuid);
-	
-		if (!wallet)
-			return Promise.reject('could not find wallet ' + walletuuid);
-	
-		var currency = await mvcpwa.getCurrencyFromUUID(sessionuuid, currencyuuid);
-
-		if (!currency)
-			return Promise.reject('could not find currency ' + currencyuuid);
-	
-		// get a child session on correct scheme
-		var currencyscheme = await mvcpwa._getCurrencyScheme(session, currency);
-		var childsession = await mvcpwa._getMonitoredSchemeSession(session, wallet, currencyscheme);
-	
-		// get erc20 credit on chain
-		let data = {address: credittoken_addr}
-		let erc20creditobj = await this._createERC20CreditObject(childsession, data);
-
-		let erc20credit = {address: credittoken_addr};
-
-		// fetch corresponding credit book
-		let creditbook_addr = await erc20creditobj.getChainCreditBook();
-		
-		data = {address: creditbook_addr};
-		let creditbookobj = await this._createCreditBookObject(childsession, currency, data);
-		
-		let owner = await creditbookobj.getChainOwner();
-		let title = await creditbookobj.getChainTitle();
-
-		erc20credit.creditbook = creditbook_addr;
-		erc20credit.creditor = owner;
-		erc20credit.description = title;
-
-		return erc20credit;
-	}
-
-	async fetchCreditLimit(sessionuuid, walletuuid, currencyuuid, credittoken_addr, client_addr) {
-		// !!! as a privacy measure, you need to provide the client address to get the limit
-
-		if (!sessionuuid)
-		return Promise.reject('session uuid is undefined');
-	
-		if (!walletuuid)
-			return Promise.reject('wallet uuid is undefined');
-
-		if (!currencyuuid)
-			return Promise.reject('currency uuid is undefined');
-
-		var global = this.global;
-		var _apicontrollers = this._getClientAPI();
-		var mvcpwa = this._getMvcPWAObject();
-	
-		var session = await _apicontrollers.getSessionObject(sessionuuid);
-		
-		if (!session)
-			return Promise.reject('could not find session ' + sessionuuid);
-
-		var wallet = await _apicontrollers.getWalletFromUUID(session, walletuuid);
-	
-		if (!wallet)
-			return Promise.reject('could not find wallet ' + walletuuid);
-	
-		var currency = await mvcpwa.getCurrencyFromUUID(sessionuuid, currencyuuid);
-
-		if (!currency)
-			return Promise.reject('could not find currency ' + currencyuuid);
-
-		// get erc20 credit on chain
-		let erc20credit = await this.fetchCreditToken(sessionuuid, walletuuid, currencyuuid, credittoken_addr);
-
-		let creditbook_addr = erc20credit.creditbook;
-
-
-		// get a child session on correct scheme
-		var currencyscheme = await mvcpwa._getCurrencyScheme(session, currency);
-		var childsession = await mvcpwa._getMonitoredSchemeSession(session, wallet, currencyscheme);
-
-		let data = {address: creditbook_addr};
-		let creditbookobj = await this._createCreditBookObject(childsession, currency, data);
-
-		let limit_string = await creditbookobj.creditlimitOf(client_addr);
-		let limit_int = parseInt(limit_string);
-
-		return limit_int;
 	}
 
 	// credit currency
@@ -1073,8 +973,8 @@ var Module = class {
 
 		return credit_currency;
 	}
-
-
+	
+	
 	async _createCurrencyCreditCard(session, wallet, card, credittoken_addr) {
 		var card_scheme = card.scheme
 
@@ -1282,6 +1182,183 @@ var Module = class {
 		var txhash = await creditbookobj.topuCreditBalance(amount, ethereumtransaction);
 
 		return txhash;
+	}
+
+	//
+	// credit tokens
+	//
+	async _createERC20CreditObject(session, data) {
+		// for local contract objects (before deployment)
+		var global = this.global;
+		var creditbookmodule = global.getModuleObject('creditbook');
+
+		var erc20credit = await creditbookmodule.createERC20CreditObject(session, data);
+
+		return erc20credit;
+	}
+
+	async fetchCreditToken(sessionuuid, walletuuid, currencyuuid, credittoken_addr) {
+		if (!sessionuuid)
+		return Promise.reject('session uuid is undefined');
+	
+		if (!walletuuid)
+			return Promise.reject('wallet uuid is undefined');
+
+		if (!currencyuuid)
+			return Promise.reject('currency uuid is undefined');
+
+		var global = this.global;
+		var _apicontrollers = this._getClientAPI();
+		var mvcpwa = this._getMvcPWAObject();
+	
+		var session = await _apicontrollers.getSessionObject(sessionuuid);
+		
+		if (!session)
+			return Promise.reject('could not find session ' + sessionuuid);
+
+		var wallet = await _apicontrollers.getWalletFromUUID(session, walletuuid);
+	
+		if (!wallet)
+			return Promise.reject('could not find wallet ' + walletuuid);
+	
+		var currency = await mvcpwa.getCurrencyFromUUID(sessionuuid, currencyuuid);
+
+		if (!currency)
+			return Promise.reject('could not find currency ' + currencyuuid);
+	
+		// get a child session on correct scheme
+		var currencyscheme = await mvcpwa._getCurrencyScheme(session, currency);
+		var childsession = await mvcpwa._getMonitoredSchemeSession(session, wallet, currencyscheme);
+	
+		// get erc20 credit on chain
+		let data = {address: credittoken_addr}
+		let erc20creditobj = await this._createERC20CreditObject(childsession, data);
+
+		let erc20credit = {address: credittoken_addr};
+
+		// fetch corresponding credit book
+		let creditbook_addr = await erc20creditobj.getChainCreditBook();
+		
+		data = {address: creditbook_addr};
+		let creditbookobj = await this._createCreditBookObject(childsession, currency, data);
+		
+		let owner = await creditbookobj.getChainOwner();
+		let title = await creditbookobj.getChainTitle();
+
+		erc20credit.creditbook = creditbook_addr;
+		erc20credit.creditor = owner;
+		erc20credit.description = title;
+
+		return erc20credit;
+	}
+
+	async fetchCreditLimit(sessionuuid, walletuuid, currencyuuid, credittoken_addr, client_addr) {
+		// !!! as a privacy measure, you need to provide the client address to get the limit
+
+		if (!sessionuuid)
+		return Promise.reject('session uuid is undefined');
+	
+		if (!walletuuid)
+			return Promise.reject('wallet uuid is undefined');
+
+		if (!currencyuuid)
+			return Promise.reject('currency uuid is undefined');
+
+		var global = this.global;
+		var _apicontrollers = this._getClientAPI();
+		var mvcpwa = this._getMvcPWAObject();
+	
+		var session = await _apicontrollers.getSessionObject(sessionuuid);
+		
+		if (!session)
+			return Promise.reject('could not find session ' + sessionuuid);
+
+		var wallet = await _apicontrollers.getWalletFromUUID(session, walletuuid);
+	
+		if (!wallet)
+			return Promise.reject('could not find wallet ' + walletuuid);
+	
+		var currency = await mvcpwa.getCurrencyFromUUID(sessionuuid, currencyuuid);
+
+		if (!currency)
+			return Promise.reject('could not find currency ' + currencyuuid);
+
+		// get erc20 credit on chain
+		let erc20credit = await this.fetchCreditToken(sessionuuid, walletuuid, currencyuuid, credittoken_addr);
+
+		let creditbook_addr = erc20credit.creditbook;
+
+
+		// get a child session on correct scheme
+		var currencyscheme = await mvcpwa._getCurrencyScheme(session, currency);
+		var childsession = await mvcpwa._getMonitoredSchemeSession(session, wallet, currencyscheme);
+
+		let data = {address: creditbook_addr};
+		let creditbookobj = await this._createCreditBookObject(childsession, currency, data);
+
+		let limit_string = await creditbookobj.creditlimitOf(client_addr);
+		let limit_int = parseInt(limit_string);
+
+		return limit_int;
+	}
+
+	async findCreditToken(sessionuuid, walletuuid, currencyuuid, vendor_addr) {
+		// !!! as a privacy measure, you need to provide the client address to get the limit
+
+		if (!sessionuuid)
+		return Promise.reject('session uuid is undefined');
+	
+		if (!walletuuid)
+			return Promise.reject('wallet uuid is undefined');
+
+		if (!currencyuuid)
+			return Promise.reject('currency uuid is undefined');
+
+		var global = this.global;
+		var _apicontrollers = this._getClientAPI();
+		var mvcpwa = this._getMvcPWAObject();
+	
+		var session = await _apicontrollers.getSessionObject(sessionuuid);
+		
+		if (!session)
+			return Promise.reject('could not find session ' + sessionuuid);
+
+		var wallet = await _apicontrollers.getWalletFromUUID(session, walletuuid);
+	
+		if (!wallet)
+			return Promise.reject('could not find wallet ' + walletuuid);
+	
+		var currency = await mvcpwa.getCurrencyFromUUID(sessionuuid, currencyuuid);
+
+		if (!currency)
+			return Promise.reject('could not find currency ' + currencyuuid);
+
+		// find credit token address
+		let credittoken_addr;
+
+		// go through credit cards
+		let creditcards = await this.readCreditCards(sessionuuid, walletuuid);
+
+		for (var i = 0; i < (creditcards ? creditcards.length : 0); i++) {
+			if (creditcards[i].currencyuuid != currencyuuid)
+				continue;
+		
+			let are_equal = await mvcpwa.areAddressesEqual(sessionuuid, creditcards[i].creditor, vendor_addr);
+
+			if (are_equal) {
+				credittoken_addr = creditcards[i].credittotken;
+				break;
+			}
+
+		}
+
+		if (!credittoken_addr)
+			return Promise.reject('could not find credit card for currency ' + currencyuuid + ' and vendor ' + vendor_addr);
+
+		// get erc20 credit on chain
+		let erc20credit = await this.fetchCreditToken(sessionuuid, walletuuid, currencyuuid, credittoken_addr);
+
+		return erc20credit;
 	}
 
 

@@ -234,7 +234,7 @@ class CreditBookView extends React.Component {
 						<FormControl 
 							autoFocus
 							type="text"
-							value={client_name}
+							value={(client_name ? client_name : '')}
 							onChange={e => this.setState({client_name: e.target.value})}
 						/>
 					</InputGroup>

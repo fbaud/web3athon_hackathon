@@ -380,7 +380,7 @@ class CreditAccountView extends React.Component {
 							disabled
 							autoFocus
 							type="text"
-							value={currency.name}
+							value={(currency && currency.name ? currency.name : '')}
 							onChange={e => this.onChangeCurrency(e)}
 						/>
 				</FormGroup>

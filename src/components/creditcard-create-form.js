@@ -249,10 +249,17 @@ class CreditCardCreateForm extends React.Component {
 
 			// save credit card locally
 			let creditcard = {};
+
+			// necessary to find all information
 			creditcard.uuid = this.app.guid();
 			creditcard.currencyuuid = currency.uuid;
 			creditcard.carduuid = currentcard.uuid;
 			creditcard.credittotken = credittoken_address;
+
+			// saved for speeding up operations
+			creditcard.creditor = erc20credit.creditor;
+			creditcard.creditbook = erc20credit.creditbook;
+			creditcard.description = erc20credit.description;
 
 			await mvcmycreditbook.saveCreditCard(rootsessionuuid, walletuuid, creditcard);
 
