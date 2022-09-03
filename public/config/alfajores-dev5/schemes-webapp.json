@@ -15,7 +15,6 @@
 			"name": "gooddollar",
 			"activate": false,
 			"web3_provider_url": "https://gooddollar-rpc.fuse.io/",
-			"chainid": 122,
 			"networkid": 122,
 			"default_gas_limit": "91346",
 			"default_gas_price": "1000000000",
@@ -39,6 +38,7 @@
 			"name": "fuse",
 			"activate": false,
 			"web3_provider_url": "https://rpc.fuse.io/",
+			"explorer_url": "https://explorer.fuse.io",
 			"chainid": 122,
 			"networkid": 122,
 			"default_gas_limit": "21000",
@@ -65,12 +65,10 @@
 			"rest_server_url": "https://rinkeby-dapps-preprod3.primusfinance.fr/", 
 			"rest_server_api_path": "/erc20-dapp/api",
 			"web3_provider_url": "https://ethnode.primusmoney.com/rinkeby",
-			"chainid": 4,
 			"networkid": 4,
-			"default_gas_limit": "1150000",
+			"default_gas_limit": "1155000",
 			"default_gas_price": "1000000000",
 			"avg_transaction_fee": "0.00021",
-			"gas_unit": "21000",
 			"transaction_units_min": "55",
 			"erc20": {
 				"tokens": ["0x1CE9fA5d2e0f0E987859565BB2DD6b09fb88f247", "0xADBC257f082b7eBc0e3F34cf317a47DFdA73a20a", "0x3A9b0C4747ed0a5748dCeE33818a342625a00d40"]
@@ -94,7 +92,6 @@
 			"name": "xdaichain",
 			"activate": false,
 			"web3_provider_url": "https://dai.poa.network",
-			"chainid": 100,
 			"networkid": 100,
 			"default_gas_limit": "105000",
 			"default_gas_price": "1000000000",
@@ -119,12 +116,36 @@
 			"name": "binancesmartchain",
 			"activate": false,
 			"web3_provider_url": "https://bsc-dataseed.binance.org/",
-			"chainid": 56,
 			"networkid": 56,
-			"default_gas_limit": "21000",
+			"default_gas_limit": "84000",
 			"default_gas_price": "10000000000",
 			"avg_transaction_fee": "0.00021",
-			"transaction_units_min": "2"
+			"transaction_units_min": "10"
+		}
+
+	},
+	"polygon": {
+		"name": "polygon matic",
+		"uuid": "d8d0d9e1-3147-a194-ff5a-0855b99f6007",
+		"restserver": {
+			"activate": false
+		},
+		"authserver": {
+			"activate": false
+		},
+		"keyserver": {
+			"activate": false
+		},
+		"ethnodeserver": {
+			"name": "polygon",
+			"activate": false,
+			"web3_provider_url": "https://rpc-mainnet.maticvigil.com/",
+			"chainid": 137,
+			"networkid": 137,
+			"default_gas_limit": "105000",
+			"default_gas_price": "50000000000",
+			"avg_transaction_fee": "0.00021",
+			"transaction_units_min": "10"
 		}
 
 	},
@@ -151,12 +172,11 @@
 			"activate": true,
 			"rest_server_url": "https://mytokens-rest.primusfinance.fr", 
 			"rest_server_api_path": "/mytokens-dapp/api",
+			"web3_provider_url_back": "https://ethnode.primusfinance.fr/firenze",
 			"web3_provider_url": "http://192.168.2.10:8545",
 			"explorerurl": "https://mytokens-rest.primusfinance.fr/mytokens-dapp/api/mytokens",
-			"chainid": 78110,
-			"networkid": 78110,
 			"default_gas_limit": "4850000",
-			"default_gas_price": "0",
+			"default_gas_price": "10000000000",
 			"avg_transaction_fee": "0.00021",
 			"transaction_units_min": "240"
 		}
@@ -186,10 +206,9 @@
 			"activate": true,
 			"rest_server_url": "https://mytokens-oauth2-rest.primusfinance.fr", 
 			"rest_server_api_path": "/mytokens-dapp/api",
+			"web3_provider_url_back": "https://ethnode.primusfinance.fr/firenze",
 			"web3_provider_url": "http://192.168.2.10:8545",
 			"explorerurl": "https://mytokens-rest.primusfinance.fr/mytokens-dapp/api/mytokens",
-			"chainid": 78110,
-			"networkid": 78110,
 			"default_gas_limit": "4850000",
 			"default_gas_price": "10000000000",
 			"avg_transaction_fee": "0.00021",
@@ -221,136 +240,10 @@
 			"rest_server_api_path": "/erc20-dapp/api",
 			"web3_provider_url": "https://ethnode.primusfinance.fr/firenze",
 			"explorerurl": "https://mytokens-rest.primusmoney.com/mytokens-dapp/api/mytokens",
-			"chainid": 78110,
-			"networkid": 78110,
 			"default_gas_limit": "4850000",
 			"default_gas_price": "10000000000",
 			"avg_transaction_fee": "0.00021",
 			"transaction_units_min": "240"
-		}
-	},
-	"polygon": {
-		"name": "polygon matic",
-		"uuid": "d8d0d9e1-3147-a194-ff5a-0855b99f6007",
-		"restserver": {
-			"activate": false
-		},
-		"authserver": {
-			"activate": false
-		},
-		"keyserver": {
-			"activate": false
-		},
-		"ethnodeserver": {
-			"name": "polygon",
-			"activate": false,
-			"web3_provider_url": "https://rpc-mainnet.maticvigil.com/",
-			"chainid": 137,
-			"networkid": 137,
-			"default_gas_limit": "84000",
-			"default_gas_price": "50000000000",
-			"avg_transaction_fee": "0.00021",
-			"transaction_units_min": "10"
-		}
-
-	},
-	"thunderscore": {
-		"name": "thunderscore",
-		"uuid": "d715e29f-4179-0a1b-f916-5f41465fa552",
-		"restserver": {
-			"activate": false
-		},
-		"authserver": {
-			"activate": false
-		},
-		"keyserver": {
-			"activate": false
-		},
-		"ethnodeserver": {
-			"name": "thunderscore",
-			"activate": false,
-			"web3_provider_url": "https://mainnet-rpc.thundercore.com/",
-			"chainid": 108,
-			"networkid": 108,
-			"default_gas_limit": "84000",
-			"default_gas_price": "1000000000",
-			"avg_transaction_fee": "0.00021",
-			"transaction_units_min": "10"
-		}
-
-	},
-	"avax": {
-		"name": "avalanche",
-		"uuid": "b18f3678-85f8-de4a-7f22-cbb24fc65413",
-		"restserver": {
-			"activate": false
-		},
-		"authserver": {
-			"activate": false
-		},
-		"keyserver": {
-			"activate": false
-		},
-		"ethnodeserver": {
-			"name": "avalanche",
-			"activate": false,
-			"web3_provider_url": "https://api.avax.network/ext/bc/C/rpc",
-			"chainid": 43114,
-			"networkid": 1,
-			"default_gas_limit": "84000",
-			"default_gas_price": "30000000000",
-			"avg_transaction_fee": "0.00021",
-			"transaction_units_min": "10"
-		}
-
-	},
-	"poanetwork": {
-		"name": "POA network",
-		"uuid": "608c6df7-5f18-1989-67bd-d4ff01cb5276",
-		"restserver": {
-			"activate": false
-		},
-		"authserver": {
-			"activate": false
-		},
-		"keyserver": {
-			"activate": false
-		},
-		"ethnodeserver": {
-			"name": "poanetwork",
-			"activate": false,
-			"web3_provider_url": "https://core.poa.network",
-			"chainid": 99,
-			"networkid": 99,
-			"default_gas_limit": "105000",
-			"default_gas_price": "10000000000",
-			"avg_transaction_fee": "0.00084",
-			"transaction_units_min": "5"
-		}
-
-	},
-	"celo": {
-		"name": "celo scheme",
-		"uuid": "41053643-0139-655c-691d-213009a58e87",
-		"restserver": {
-			"activate": false
-		},
-		"authserver": {
-			"activate": false
-		},
-		"keyserver": {
-			"activate": false
-		},
-		"ethnodeserver": {
-			"name": "celo",
-			"activate": false,
-			"web3_provider_url": "https://forno.celo.org",
-			"chainid": 42220,
-			"networkid": 42220,
-			"default_gas_limit": "84000",
-			"default_gas_price": "1000000000",
-			"avg_transaction_fee": "0.000021000",
-			"transaction_units_min": "2"
 		}
 	},
 	"alfajores": {
@@ -376,6 +269,55 @@
 			"avg_transaction_fee": "0.000021000",
 			"transaction_units_min": "2"
 		}
-	}
-	
+	},
+	"polygon-mumbai": {
+		"name": "polygon mumbai testnet",
+		"uuid": "974aa1d6-e340-4332-8a7e-1434c962e41a",
+		"restserver": {
+			"activate": false
+		},
+		"authserver": {
+			"activate": false
+		},
+		"keyserver": {
+			"activate": false
+		},
+		"ethnodeserver": {
+			"name": "polygon",
+			"activate": false,
+			"web3_provider_url_back": "https://rpc-mumbai.maticvigil.com/",
+			"web3_provider_url": "https://matic-mumbai.chainstacklabs.com",
+			"networkid": 80001,
+			"default_gas_limit": "105000",
+			"default_gas_price": "50000000000",
+			"avg_transaction_fee": "0.00021",
+			"transaction_units_min": "10"
+		}
+
+	},
+	"avax-fuji": {
+		"name": "avalanche fuji testnet",
+		"uuid": "978e6ac7-3e63-0be2-a4f4-5e498bae790e",
+		"restserver": {
+			"activate": false
+		},
+		"authserver": {
+			"activate": false
+		},
+		"keyserver": {
+			"activate": false
+		},
+		"ethnodeserver": {
+			"name": "avalanche",
+			"activate": false,
+			"web3_provider_url": "https://api.avax-test.network/ext/bc/C/rpc",
+			"chainid": 43113,
+			"networkid": 1,
+			"default_gas_limit": "84000",
+			"default_gas_price": "30000000000",
+			"avg_transaction_fee": "0.00021",
+			"transaction_units_min": "10"
+		}
+
+	}	
 }

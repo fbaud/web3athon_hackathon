@@ -246,6 +246,30 @@
 			"transaction_units_min": "240"
 		}
 	},
+	"alfajores": {
+		"name": "alfajores celo testnet scheme",
+		"uuid": "36ee1e57-778f-c9e3-1152-5856f31ef98f",
+		"restserver": {
+			"activate": false
+		},
+		"authserver": {
+			"activate": false
+		},
+		"keyserver": {
+			"activate": false
+		},
+		"ethnodeserver": {
+			"name": "alfajores",
+			"activate": false,
+			"web3_provider_url": "https://alfajores-forno.celo-testnet.org",
+			"chainid": 44787,
+			"networkid": 44787,
+			"default_gas_limit": "84000",
+			"default_gas_price": "1000000000",
+			"avg_transaction_fee": "0.000021000",
+			"transaction_units_min": "2"
+		}
+	},
 	"polygon-mumbai": {
 		"name": "polygon mumbai testnet",
 		"uuid": "974aa1d6-e340-4332-8a7e-1434c962e41a",
@@ -266,6 +290,31 @@
 			"networkid": 80001,
 			"default_gas_limit": "105000",
 			"default_gas_price": "50000000000",
+			"avg_transaction_fee": "0.00021",
+			"transaction_units_min": "10"
+		}
+
+	},
+	"avax-fuji": {
+		"name": "avalanche fuji testnet",
+		"uuid": "978e6ac7-3e63-0be2-a4f4-5e498bae790e",
+		"restserver": {
+			"activate": false
+		},
+		"authserver": {
+			"activate": false
+		},
+		"keyserver": {
+			"activate": false
+		},
+		"ethnodeserver": {
+			"name": "avalanche",
+			"activate": false,
+			"web3_provider_url": "https://api.avax-test.network/ext/bc/C/rpc",
+			"chainid": 43113,
+			"networkid": 1,
+			"default_gas_limit": "84000",
+			"default_gas_price": "30000000000",
 			"avg_transaction_fee": "0.00021",
 			"transaction_units_min": "10"
 		}

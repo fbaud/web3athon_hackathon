@@ -3,7 +3,7 @@ import { connect } from 'react-redux';
 
 import PropTypes from 'prop-types';
 
-import { Button } from 'react-bootstrap';
+import { Button, Dropdown, DropdownButton, FormGroup, FormControl, FormLabel, InputGroup } from 'react-bootstrap';
 
 import '../css/poc.css';
 
@@ -47,7 +47,10 @@ class BillScreen extends React.Component {
 		this.bill_tx_hash = null;
 
 		this.state = {
-			symbol: '€',
+			currency: {symbol: ''},
+			currencies: [],
+			symbol: '$',
+			currentcard: null,
 			canpay: false,
 			instructions: 'Enter the amount to pay',
 			current_scheme_name: 'unknown',
@@ -61,9 +64,75 @@ class BillScreen extends React.Component {
 		this.setState(state);
 	}
 
-	componentDidUpdate(prevProps) {
+	// post render commit phase
+	async _readVisibleCurrencies() {
+		let mvcmypwa = this.getMvcMyPWAObject();
+
+		let rootsessionuuid = this.props.rootsessionuuid;
+		let walletuuid = this.props.currentwalletuuid;
+
+		let currencies = await mvcmypwa.getCurrencies(rootsessionuuid, walletuuid);
+
+		if (!currencies)
+		return Promise.reject('could not get list of currencies');
+
+		let arr = [];
+
+		for (var i = 0; i < currencies.length; i++) {
+			if (currencies[i].hidden && (currencies[i].hidden == true))
+			continue;
+
+			// check we have a currency card
+			let currencycard = await mvcmypwa.getCurrencyCard(rootsessionuuid, walletuuid, currencies[i].uuid).catch(err=>{});
+
+			if (currencycard)
+			arr.push(currencies[i]);
+		}
+
+		return arr;
+	}
+
+	async _selectCurrency(currencyuuid) {
+		let mvcmypwa = this.getMvcMyPWAObject();
+
+		let rootsessionuuid = this.props.rootsessionuuid;
+		let walletuuid = this.props.currentwalletuuid;
+		
+		let currency = await mvcmypwa.getCurrencyFromUUID(rootsessionuuid, currencyuuid)
+		.catch(err => {
+			console.log('error in BillScreen._selectCurrency: ' + err);
+		});		
+		
+		var card = await this.app.openCurrencyCard(currencyuuid);
+
+		var currentcard = card;
+
+		let billpay_config = await this.getBillPayConfig(currencyuuid);
+		let current_scheme_name = await this.getCurrentSchemeName(currencyuuid);
+
+		let currency_symbol = billpay_config.currency.symbol
+
+		this._setState({current_scheme_name, symbol: currency_symbol, currency, currentcard});
+	}
+
+	componentDidUpdate(prevProps, prevState) {
 		console.log('BillScreen.componentDidUpdate called');
 		
+		// selected a currency
+		if (this.state.currency && this.state.currency.uuid && (this.state.currency.uuid != (prevState.currency ? prevState.currency.uuid : null))) {
+			// we reset the current card
+			let currentcard = null;
+			let balance = '';
+
+			const currency = this.state.currency;
+			let currencyuuid = currency.uuid;
+
+			this._selectCurrency(currencyuuid)			
+			.catch(err => {
+				this._setState({currentcard, balance})
+			});
+
+		}
 	}
 
 	componentDidMount() {
@@ -95,13 +164,13 @@ class BillScreen extends React.Component {
 	}
 
 	async getBillPayConfig(currencyuuid) {
-		if (this.bill_pay_config)
-			return this.bill_pay_config;
+		let _currencyuuid = (currencyuuid ? currencyuuid : (this.state.currency ? this.state.currency.uuid : null));
+		// take currently selected currency if none passed
 
 		// read json config file
 		let json = await this.mvcmypwa.loadConfig('/bill-pay');
 
-		this.bill_pay_config = json.currencies[currencyuuid];
+		this.bill_pay_config = json.currencies[_currencyuuid];
 
 		// we fill vendor address
 		let mvcmypwa = this.getMvcMyPWAObject();
@@ -109,7 +178,7 @@ class BillScreen extends React.Component {
 		let rootsessionuuid = this.props.rootsessionuuid;
 		let walletuuid = this.props.currentwalletuuid;
 
-		let currencycard = await mvcmypwa.getCurrencyCard(rootsessionuuid, walletuuid, currencyuuid).catch(err=>{});
+		let currencycard = await mvcmypwa.getCurrencyCard(rootsessionuuid, walletuuid, _currencyuuid).catch(err=>{});
 
 		if (currencycard)
 		this.bill_pay_config.widget_params.vendor_address = currencycard.address;
@@ -152,15 +221,17 @@ class BillScreen extends React.Component {
 				}
 			}
 
+			// list of currencies
+			var currencies = await this._readVisibleCurrencies()
+			.catch(err => {
+				console.log('error in CreditBookCreateForm.checkNavigationState ' + err);
+			});
 
-			let currencyuuid = await this.getCurrentCurrencyUUID();
-						
-			let billpay_config = await this.getBillPayConfig(currencyuuid);
-			let current_scheme_name = await this.getCurrentSchemeName(currencyuuid);
+			// potentially filter currencies
+			var enabled_currencies = currencies;
 
-			let currency_symbol = billpay_config.currency.symbol
 
-			this.setState({current_scheme_name, symbol: currency_symbol});
+			this.setState({currencies: enabled_currencies});
 	
 		}
 		catch(e) {
@@ -278,6 +349,24 @@ class BillScreen extends React.Component {
 		}
 	}
 
+	// user actions
+	async onSelectCurrency(uuid) {
+		var {currencies} = this.state;
+		var currency;
+
+		for (var i = 0; i < currencies.length; i++) {
+			if (uuid === currencies[i].uuid) {
+				currency = currencies[i];
+				break;
+			}
+		}
+
+		if (currency)
+		this._setState({currency});
+	}
+
+
+
 	async onAmountChange(value, name) {
 		let amount = value;
 
@@ -297,38 +386,33 @@ class BillScreen extends React.Component {
 
  
 		try {
-			let billpay_config = await this.getBillPayConfig();
-
 			let mvcmypwa = this.getMvcMyPWAObject();
 			var mvcmycreditbook = this.getMvcMyCreditBookObject();
 
 			let rootsessionuuid = this.props.rootsessionuuid;
 			let walletuuid = this.props.currentwalletuuid;
 
-			let web3_provider_url = billpay_config.widget_params.web3_provider_url;
-			let card_address = billpay_config.widget_params.vendor_address;
+			const {currentcard, currency} = this.state;
 
+			let currencyuuid = currency.uuid;
 
-			// find a card with this address capable of transacting on this web3provider
-			// whatever the exact scheme
-			var current_card;
-			var cards = await mvcmycreditbook.getCardListWithAddressOnWeb3Url(rootsessionuuid, walletuuid, web3_provider_url, card_address).catch(err => {});
-
-			// we then pick the first card that is on a local scheme
-			for (var i = 0; i < (cards ? cards.length : 0); i++) {
-				var cardschemetype = await mvcmycreditbook.getCardSchemeType(rootsessionuuid, walletuuid, cards[i].uuid);
-
-				if (cardschemetype === 0) {
-					current_card = cards[i];
-					break;
-				}
-			}
-
-			if (!current_card) {
-				this.app.alert('could not find a card with address ' + card_address + ' web3 provider ' + web3_provider_url);
+			if (!currencyuuid) {
+				this.app.alert('you must select a currency first');
 				this._setState({processing: false});
 				return;
 			}
+
+			if (!currentcard) {
+				this.app.alert('no currency card selected for corresponding currency');
+				this._setState({processing: false});
+				return;
+			}
+
+			let current_card = currentcard;
+
+			let billpay_config = await this.getBillPayConfig(currencyuuid);
+
+			let web3_provider_url = billpay_config.widget_params.web3_provider_url;
 
 
 			// we register this bill as a transaction
@@ -447,9 +531,34 @@ class BillScreen extends React.Component {
 	}
 
 	renderDataForm() {
+		const {currency, currencies} = this.state;
 		return (
 			<div className="Container">
 				<div className="Instructions">{this.state.instructions}</div>
+				<FormGroup controlId="currency">
+					<FormLabel>Currency</FormLabel>
+					<FormGroup className="DeedCurrencyPickLine" controlId="pickccy">
+						<InputGroup>
+							<FormControl  className="DeedCurrencyName"
+								autoFocus
+								type="text"
+								value={(currency ? currency.symbol : '')}
+								onChange={e => this.onChangeCurrency(e)}
+							/>
+							<DropdownButton
+								id="input-dropdown-addon"
+								title="Cur."
+								onSelect={e => this.onSelectCurrency(e)}
+							>
+								{currencies.map((item, index) => (
+									<Dropdown.Item key={item.uuid} eventKey={item.uuid} value={item.uuid}>{item.symbol}</Dropdown.Item>
+								))}
+							</DropdownButton>
+						</InputGroup>
+					</FormGroup>
+				</FormGroup>
+
+
 				<CurrencyInput
 					className={'Currency-Amount-Input'}
 					id="bill-amount"

@@ -802,9 +802,12 @@ var Module = class {
 		var fee = await _apicontrollers.createSchemeFee(from_card_scheme, feelevel);
 
 		ethereumtransaction.setGas(fee.gaslimit);
-		ethereumtransaction.setGasPrice(fee.gasPrice);	
+		ethereumtransaction.setGasPrice(fee.gasPrice);
+		
+		// turn to string to avoid BigNumber error
+		var new_limit_string = new_limit.toString();
 
-		let txhash = await creditbookobj.updateCreditLimit(client_addr, new_limit, ethereumtransaction);
+		let txhash = await creditbookobj.updateCreditLimit(client_addr, new_limit_string, ethereumtransaction);
 
 		return txhash;
 	}
@@ -1077,6 +1080,121 @@ var Module = class {
 		return creditcard_info;
 	}
 
+	async fetchCreditCardInfo(sessionuuid, walletuuid, creditcarduuid, options) {
+		// !!! as a privacy measure, you need to provide the client address to get the limit
+
+		console.log('fetchCreditCardInfo start');
+
+
+		if (!sessionuuid)
+		return Promise.reject('session uuid is undefined');
+	
+		if (!walletuuid)
+			return Promise.reject('wallet uuid is undefined');
+
+		if (!creditcarduuid)
+			return Promise.reject('credit card uuid is undefined');
+
+		var global = this.global;
+		var _apicontrollers = this._getClientAPI();
+		var mvcpwa = this._getMvcPWAObject();
+	
+		var session = await _apicontrollers.getSessionObject(sessionuuid);
+		
+		if (!session)
+			return Promise.reject('could not find session ' + sessionuuid);
+
+		var wallet = await _apicontrollers.getWalletFromUUID(session, walletuuid);
+	
+		if (!wallet)
+			return Promise.reject('could not find wallet ' + walletuuid);
+	
+		let creditcard_meta = await this.readCreditCard(sessionuuid, walletuuid, creditcarduuid);
+
+		if (!creditcard_meta)
+			return Promise.reject('could not find credit card ' + creditcarduuid);
+
+		let currencyuuid = creditcard_meta.currencyuuid;
+		let clientcarduuid = creditcard_meta.carduuid;
+		let credittoken_addr = creditcard_meta.credittotken;
+
+		var currency = await mvcpwa.getCurrencyFromUUID(sessionuuid, currencyuuid);
+
+		if (!currency)
+			return Promise.reject('could not find currency ' + currencyuuid);
+
+		//
+		// client card
+		let clientcard = await wallet.getCardFromUUID(clientcarduuid);
+		let client_addr = clientcard.address;
+
+		// get a child session on correct scheme
+		var childsession = await mvcpwa._getMonitoredCardSession(session, wallet, clientcard);
+
+
+		// get erc20 credit on chain
+		let data = {address: credittoken_addr}
+		let erc20creditobj = await this._createERC20CreditObject(childsession, data);
+
+		// fetch corresponding credit book
+		let creditbook_addr = await erc20creditobj.getChainCreditBook();
+		
+		data = {address: creditbook_addr};
+		let creditbookobj = await this._createCreditBookObject(childsession, currency, data);
+
+/* 		// get erc20 credit on chain
+		let erc20credit = await this.fetchCreditToken(sessionuuid, walletuuid, currencyuuid, credittoken_addr);
+
+		let creditbook_addr = erc20credit.creditbook;
+
+
+		// get a child session on correct scheme
+		var currencyscheme = await mvcpwa._getCurrencyScheme(session, currency);
+		var childsession = await mvcpwa._getMonitoredSchemeSession(session, wallet, currencyscheme);
+
+		let data = {address: creditbook_addr};
+		let creditbookobj = await this._createCreditBookObject(childsession, currency, data); */
+
+		let owner = await creditbookobj.getChainOwner();
+		let title = await creditbookobj.getChainTitle();
+
+
+
+		let limit_str = await creditbookobj.creditlimitOf(client_addr);
+		let limit_int = parseInt(limit_str);
+
+		let limit_string = await this._formatCurrencyIntAmount(sessionuuid, currencyuuid, limit_int, options);
+
+		//
+		//  credit card info
+		let creditcard = await this.getCurrencyCreditCard(sessionuuid, walletuuid, clientcarduuid, credittoken_addr);
+		let creditcurrencyuuid = creditcard.currencyuuid;
+
+		let credit_balance_pos = await mvcpwa.getCurrencyPosition(sessionuuid, walletuuid, creditcurrencyuuid, creditcard.uuid);
+		const credit_balance_string = await mvcpwa.formatCurrencyAmount(sessionuuid, creditcurrencyuuid, credit_balance_pos);
+		const credit_balance_int = await credit_balance_pos.toInteger();
+
+		// position
+		let creditcard_info = {};
+
+		creditcard_info.creditcard = creditcard;
+
+		creditcard_info.limit_string = limit_string;
+		creditcard_info.limit_int = limit_int;
+
+		creditcard_info.balance_int = credit_balance_int;
+		creditcard_info.balance_string = credit_balance_string;
+
+		creditcard_info.creditbook = creditbook_addr;
+		creditcard_info.creditor = owner;
+		creditcard_info.description = title;
+
+
+		console.log('fetchCreditCardInfo end');
+
+		return creditcard_info;
+	}
+
 	async payWithCurrencyCreditCard(sessionuuid, walletuuid, carduuid, credittoken_addr, toaddress, amount, feelevel) {
 		if (!sessionuuid)
 			return Promise.reject('session uuid is undefined');
@@ -1166,6 +1284,9 @@ var Module = class {
 		var data = {address: creditbook_addr};
 		var creditbookobj = await this._createCreditBookObject(childsession, cardcurrency, data);
 
+		var owner = await creditbookobj.getChainOwner();
+		var currencytoken = await creditbookobj.getChainCurrencyToken();
+
 		// create ethereum transaction object
 		var fromaccount = card._getSessionAccountObject();
 		var from_card_scheme = card.getScheme();
@@ -1200,13 +1321,28 @@ var Module = class {
 		var gas = fee.gaslimit;
 		var gasPrice = fee.gasPrice;
 
-		var txhash = await erc20contract.approve(alloweeaccount, amount, payingaccount, gas, gasPrice);
+		// turn to string to avoid BigNumber error
+		var amount_string = amount.toString();
 
-		if (!txhash)
+		var balance = await erc20contract.balanceOf(payingaccount);
+
+		if (balance < amount)
+			return Promise.reject('not enough funds on ' + cardcurrency.address + ' to top up ' + amount);
+
+
+		var allowance = await erc20contract.allowance(payingaccount, alloweeaccount);
+
+		if (amount > allowance) {
+			let _allowance = amount.toString();
+			let _txhash = await erc20contract.approve(alloweeaccount, _allowance, payingaccount, gas, gasPrice);
+
+			if (!_txhash)
 			return Promise.reject('could not approve credit book contract as spender for token ' + cardcurrency.address);
+		}
+
 
 		// then let creditbook do the top up
-		var txhash = await creditbookobj.topupCreditBalance(amount, ethereumtransaction);
+		var txhash = await creditbookobj.topupCreditBalance(amount_string, ethereumtransaction);
 
 		return txhash;
 	}
@@ -1279,55 +1415,7 @@ var Module = class {
 		return erc20credit;
 	}
 
-	async fetchCreditLimit(sessionuuid, walletuuid, currencyuuid, credittoken_addr, client_addr) {
-		// !!! as a privacy measure, you need to provide the client address to get the limit
 
-		if (!sessionuuid)
-		return Promise.reject('session uuid is undefined');
-	
-		if (!walletuuid)
-			return Promise.reject('wallet uuid is undefined');
-
-		if (!currencyuuid)
-			return Promise.reject('currency uuid is undefined');
-
-		var global = this.global;
-		var _apicontrollers = this._getClientAPI();
-		var mvcpwa = this._getMvcPWAObject();
-	
-		var session = await _apicontrollers.getSessionObject(sessionuuid);
-		
-		if (!session)
-			return Promise.reject('could not find session ' + sessionuuid);
-
-		var wallet = await _apicontrollers.getWalletFromUUID(session, walletuuid);
-	
-		if (!wallet)
-			return Promise.reject('could not find wallet ' + walletuuid);
-	
-		var currency = await mvcpwa.getCurrencyFromUUID(sessionuuid, currencyuuid);
-
-		if (!currency)
-			return Promise.reject('could not find currency ' + currencyuuid);
-
-		// get erc20 credit on chain
-		let erc20credit = await this.fetchCreditToken(sessionuuid, walletuuid, currencyuuid, credittoken_addr);
-
-		let creditbook_addr = erc20credit.creditbook;
-
-
-		// get a child session on correct scheme
-		var currencyscheme = await mvcpwa._getCurrencyScheme(session, currency);
-		var childsession = await mvcpwa._getMonitoredSchemeSession(session, wallet, currencyscheme);
-
-		let data = {address: creditbook_addr};
-		let creditbookobj = await this._createCreditBookObject(childsession, currency, data);
-
-		let limit_string = await creditbookobj.creditlimitOf(client_addr);
-		let limit_int = parseInt(limit_string);
-
-		return limit_int;
-	}
 
 	async findCreditToken(sessionuuid, walletuuid, currencyuuid, vendor_addr) {
 		// !!! as a privacy measure, you need to provide the client address to get the limit

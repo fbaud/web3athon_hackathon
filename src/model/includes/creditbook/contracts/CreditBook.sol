@@ -149,12 +149,17 @@ contract CreditBook {
 
         require( (_current_limit - _current_balance) >= amount, "TOPUP: amount exceeds ceiling");
 
-        IERC20 tok = IERC20(_currency_token);
+        IERC20 _ccytok = IERC20(_currency_token);
 
-        uint256 _allowance = tok.allowance(_client, address(this));
-        require(_allowance >= amount, "TOPUP: check the currency allowance for contract");
+        uint256 _ccybalance = _ccytok.balanceOf(_client);
+ 
+        uint256 _ccyallowance = _ccytok.allowance(_client, address(this));
 
-        bool _done = tok.transferFrom(_client, _owner, amount);
+
+        require(_ccybalance >= amount, "TOPUP: balance of currency token is too low");
+        require(_ccyallowance >= amount, "TOPUP: check the currency allowance for contract");
+
+        bool _done = _ccytok.transferFrom(_client, _owner, amount);
 
         if (_done) {
             _balances[_client] = _current_balance + amount;

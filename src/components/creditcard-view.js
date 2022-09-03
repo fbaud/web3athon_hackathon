@@ -39,7 +39,9 @@ class CreditCardView extends React.Component {
 				message_text: 'loading...',
 	
 				creditcard: null,
+				credit_limit_int: 0,
 				credit_limit_string: 'loading...',
+				crdit_balance_int: 0,
 				credit_balance_string: 'loading...',
 
 				message_text: 'loading...',
@@ -89,8 +91,9 @@ class CreditCardView extends React.Component {
 			let options = {showdecimals: true, decimalsshown: 2 /* currency.decimals */};
 
 
-
 			if (creditcarduuid) {
+				console.log('CreditCardView.checkNavigationState start');
+
 				this.creditcarduuid = creditcarduuid;
 
 				let creditcard_meta = await mvcmycreditbook.readCreditCard(rootsessionuuid, walletuuid, creditcarduuid);
@@ -106,7 +109,6 @@ class CreditCardView extends React.Component {
 				//
 				// client card
 				let clientcard = await mvcmypwa.getWalletCard(rootsessionuuid, walletuuid, clientcarduuid).catch(err=>{});
-				let client_addr = clientcard.address;
 
 				let clientscheme = await mvcmypwa.getCardSchemeInfo(rootsessionuuid, walletuuid, clientcard.uuid);
 
@@ -130,29 +132,25 @@ class CreditCardView extends React.Component {
 
 
 				//
-				// erc20 credit
-				let erc20credit = await mvcmycreditbook.fetchCreditToken(rootsessionuuid, walletuuid, currencyuuid, credittoken_addr);
+				// credit card position
+				let creditcard_position = await mvcmycreditbook.fetchCreditCardInfo(rootsessionuuid, walletuuid, creditcarduuid, options);
 
 				//
 				// credit limit
-				let credit_limit = await mvcmycreditbook.fetchCreditLimit(rootsessionuuid, walletuuid, currencyuuid, credittoken_addr, client_addr);
- 
-				// limit
-				let credit_limit_string = await mvcmycreditbook._formatCurrencyIntAmount(rootsessionuuid, currencyuuid, credit_limit, options);
+				let credit_limit_int = creditcard_position.limit_int;
+ 				let credit_limit_string = creditcard_position.limit_string;
 
 				//
-				//  credit card info
-				let creditcard = await mvcmycreditbook.getCurrencyCreditCard(rootsessionuuid, walletuuid, clientcarduuid, credittoken_addr);
-				let creditcurrencyuuid = creditcard.currencyuuid;
+				//  balance
+				const credit_balance_string = creditcard_position.balance_string;
+				const credit_balance_int = creditcard_position.balance_int;
 
-				let credit_balance_pos = await mvcmypwa.getCurrencyPosition(rootsessionuuid, walletuuid, creditcurrencyuuid, creditcard.uuid);
-				const credit_balance_string = await mvcmypwa.formatCurrencyAmount(rootsessionuuid, creditcurrencyuuid, credit_balance_pos);
-				const credit_balance = await credit_balance_pos.toInteger();
+				console.log('CreditCardView.checkNavigationState end');
 
 				this.setState({	
 					currency,
 
-					title: erc20credit.description, 
+					title: creditcard_position.description, 
 
 					clientcard,
 					client_address_string,
@@ -160,9 +158,9 @@ class CreditCardView extends React.Component {
 					client_position_int, client_position_string,
 					web3providerurl, web3providerurl_string,
 
-					creditcard,
-					credit_limit, credit_limit_string, 
-					credit_balance, credit_balance_string});
+					creditcard: creditcard_position.creditcard,
+					credit_limit_int, credit_limit_string, 
+					credit_balance_int, credit_balance_string});
 	
 			}
 			// mark target as reached
@@ -196,7 +194,7 @@ class CreditCardView extends React.Component {
 		this._setState({processing: true});
 
 		try {
-			let {clientcard, client_position_int, credit_limit, credit_balance} = this.state;
+			let {clientcard, client_position_int, credit_limit_string, credit_limit_int, credit_balance_string, credit_balance_int} = this.state;
 			let creditcarduuid = this.creditcarduuid;
 
 			let creditcard_meta = await mvcmycreditbook.readCreditCard(rootsessionuuid, walletuuid, creditcarduuid);
@@ -206,7 +204,10 @@ class CreditCardView extends React.Component {
 			let credittoken_addr = creditcard_meta.credittotken;
 
 			// amount to topup
-			let amount = credit_limit - credit_balance;
+			let amount_int = credit_limit_int - credit_balance_int;
+			//let amount_bigint = BigInt(credit_limit_int) - BigInt(credit_balance_int);
+			let amount_string = credit_limit_string - credit_balance_string;
+			let amount = amount_int;
 
 			if (amount <= 0) {
 				this.app.alert('Balance is already at its top');

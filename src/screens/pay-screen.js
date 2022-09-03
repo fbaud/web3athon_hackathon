@@ -318,7 +318,6 @@ class PayScreen extends React.Component {
 			// set card inside the widget
 	
 			const {currentcard} = this.state;
-			debugger;
 
 			let widget_address = await  widget_client.doChangeCurrentCard(currentcard.address);
 
