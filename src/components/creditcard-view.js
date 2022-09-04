@@ -44,6 +44,8 @@ class CreditCardView extends React.Component {
 				crdit_balance_int: 0,
 				credit_balance_string: 'loading...',
 
+				topup_max_int: 0,
+
 				message_text: 'loading...',
 				processing: false
 		}
@@ -145,6 +147,9 @@ class CreditCardView extends React.Component {
 				const credit_balance_string = creditcard_position.balance_string;
 				const credit_balance_int = creditcard_position.balance_int;
 
+				// max topup
+				const topup_max_int = creditcard_position.topup_max_int;
+
 				console.log('CreditCardView.checkNavigationState end');
 
 				this.setState({	
@@ -160,7 +165,9 @@ class CreditCardView extends React.Component {
 
 					creditcard: creditcard_position.creditcard,
 					credit_limit_int, credit_limit_string, 
-					credit_balance_int, credit_balance_string});
+					credit_balance_int, credit_balance_string,
+				
+					topup_max_int});
 	
 			}
 			// mark target as reached
@@ -194,7 +201,9 @@ class CreditCardView extends React.Component {
 		this._setState({processing: true});
 
 		try {
-			let {clientcard, client_position_int, credit_limit_string, credit_limit_int, credit_balance_string, credit_balance_int} = this.state;
+			let {clientcard, client_position_int,
+				credit_limit_string, credit_limit_int, credit_balance_string, credit_balance_int,
+				topup_max_int} = this.state;
 			let creditcarduuid = this.creditcarduuid;
 
 			let creditcard_meta = await mvcmycreditbook.readCreditCard(rootsessionuuid, walletuuid, creditcarduuid);
@@ -204,10 +213,7 @@ class CreditCardView extends React.Component {
 			let credittoken_addr = creditcard_meta.credittotken;
 
 			// amount to topup
-			let amount_int = credit_limit_int - credit_balance_int;
-			//let amount_bigint = BigInt(credit_limit_int) - BigInt(credit_balance_int);
-			let amount_string = credit_limit_string - credit_balance_string;
-			let amount = amount_int;
+			let amount = topup_max_int;
 
 			if (amount <= 0) {
 				this.app.alert('Balance is already at its top');

@@ -1080,6 +1080,24 @@ var Module = class {
 		return creditcard_info;
 	}
 
+	async _createCurrencyAmount(session, currency, amount) {
+		var global = this.global;
+		var CurrencyAmountClass = global.getModuleClass('currencies', 'CurrencyAmount');
+		return CurrencyAmountClass.create(session, currency, amount);
+	}
+
+	async _createDecimalAmount(session, amount, decimals) {
+		// we are using an enriched version of DecimalAmount (2022.09.04)
+		// because several operations (e.g. substraction) are missing at the time
+		var global = this.global;
+		var DecimalAmountClass = global.getModuleClass('creditbook', 'DecimalAmount');
+		return DecimalAmountClass.create(session, amount, decimals);
+		
+		/*var mvcpwa = this._getMvcPWAObject();
+
+		return mvcpwa._createDecimalAmount(session, amount, decimals);*/
+	}
+
 	async fetchCreditCardInfo(sessionuuid, walletuuid, creditcarduuid, options) {
 		// !!! as a privacy measure, you need to provide the client address to get the limit
 
@@ -1142,48 +1160,63 @@ var Module = class {
 		data = {address: creditbook_addr};
 		let creditbookobj = await this._createCreditBookObject(childsession, currency, data);
 
-/* 		// get erc20 credit on chain
-		let erc20credit = await this.fetchCreditToken(sessionuuid, walletuuid, currencyuuid, credittoken_addr);
-
-		let creditbook_addr = erc20credit.creditbook;
-
-
-		// get a child session on correct scheme
-		var currencyscheme = await mvcpwa._getCurrencyScheme(session, currency);
-		var childsession = await mvcpwa._getMonitoredSchemeSession(session, wallet, currencyscheme);
-
-		let data = {address: creditbook_addr};
-		let creditbookobj = await this._createCreditBookObject(childsession, currency, data); */
-
+		//
+		// credit book info
 		let owner = await creditbookobj.getChainOwner();
 		let title = await creditbookobj.getChainTitle();
 
-
-
-		let limit_str = await creditbookobj.creditlimitOf(client_addr);
-		let limit_int = parseInt(limit_str);
-
-		let limit_string = await this._formatCurrencyIntAmount(sessionuuid, currencyuuid, limit_int, options);
+		let credit_limit_str = await creditbookobj.creditlimitOf(client_addr);
+		
+		let credit_limit_int = parseInt(credit_limit_str);
+		let credit_limit_string = await this._formatCurrencyIntAmount(sessionuuid, currencyuuid, credit_limit_int, options);
+		
+		let credit_limit_dec = await this._createDecimalAmount(session, credit_limit_int, currency.decimals);
+		let credit_limit_cur = await this._createCurrencyAmount(session, currency, credit_limit_int);
+		let credit_limit_fixed_str = await credit_limit_dec.toFixedString(2);
+		let credit_limit_float = parseFloat(credit_limit_fixed_str);
 
 		//
 		//  credit card info
 		let creditcard = await this.getCurrencyCreditCard(sessionuuid, walletuuid, clientcarduuid, credittoken_addr);
 		let creditcurrencyuuid = creditcard.currencyuuid;
 
+		// TODO: looking directly in creditbook for balance could be faster
 		let credit_balance_pos = await mvcpwa.getCurrencyPosition(sessionuuid, walletuuid, creditcurrencyuuid, creditcard.uuid);
-		const credit_balance_string = await mvcpwa.formatCurrencyAmount(sessionuuid, creditcurrencyuuid, credit_balance_pos);
-		const credit_balance_int = await credit_balance_pos.toInteger();
+		
+		let credit_balance_int = await credit_balance_pos.toInteger();
+		let credit_balance_string = await mvcpwa.formatCurrencyAmount(sessionuuid, creditcurrencyuuid, credit_balance_pos);
+
+		let credit_balance_dec = await this._createDecimalAmount(session, credit_balance_int, currency.decimals);
+		let credit_balance_cur = await this._createCurrencyAmount(session, currency, credit_balance_int);
+		let credit_balance_fixed_str = await credit_balance_dec.toFixedString();
+		let credit_balance_float = parseFloat(credit_balance_fixed_str);
+
+/* 		let topup_max_1 = credit_limit_int - credit_balance_int;
+		let topup_max_2 = credit_limit_float - credit_balance_float;
+		let topup_max_dec_3 = await credit_limit_dec.substract(credit_balance_dec);
+		let topup_max_int_3 = await topup_max_dec_3.toInteger();
+		let topup_max_str_3 = await topup_max_dec_3.toString();
+		let topup_max_istr_3 = await topup_max_dec_3.toInternalString();
+		let topup_max_fixedstr_3 = await topup_max_dec_3.toFixedString(4);
+		let topup_max_bignumber_3 = await topup_max_dec_3.toBigNumber(); */
+
+		let topup_max_dec = await credit_limit_dec.substract(credit_balance_dec);
+		let topup_max_int = await topup_max_dec.toInteger();
+
 
 		// position
 		let creditcard_info = {};
 
 		creditcard_info.creditcard = creditcard;
 
-		creditcard_info.limit_string = limit_string;
-		creditcard_info.limit_int = limit_int;
+		creditcard_info.limit_string = credit_limit_string;
+		creditcard_info.limit_int = credit_limit_int;
 
 		creditcard_info.balance_int = credit_balance_int;
 		creditcard_info.balance_string = credit_balance_string;
+
+		creditcard_info.topup_max_int = topup_max_int;
+
 
 		creditcard_info.creditbook = creditbook_addr;
 		creditcard_info.creditor = owner;
@@ -1284,8 +1317,19 @@ var Module = class {
 		var data = {address: creditbook_addr};
 		var creditbookobj = await this._createCreditBookObject(childsession, cardcurrency, data);
 
-		var owner = await creditbookobj.getChainOwner();
-		var currencytoken = await creditbookobj.getChainCurrencyToken();
+		//var owner = await creditbookobj.getChainOwner();
+		//var currencytoken = await creditbookobj.getChainCurrencyToken();
+		var  client_addr = card.address;
+
+		var credit_limit_str = await creditbookobj.creditlimitOf(client_addr);
+		var credit_limit_int = parseInt(credit_limit_str);
+
+		let credit_balance_str = await creditbookobj.balanceOf(client_addr);
+		let credit_balance_int = parseInt(credit_balance_str);
+
+		if ( credit_balance_int + amount > credit_limit_int)
+			return Promise.reject('can not go over credit limit of ' + credit_limit_int + ' by adding ' + amount + ' to ' + credit_balance_int);
+
 
 		// create ethereum transaction object
 		var fromaccount = card._getSessionAccountObject();
@@ -1325,6 +1369,7 @@ var Module = class {
 		var amount_string = amount.toString();
 
 		var balance = await erc20contract.balanceOf(payingaccount);
+
 
 		if (balance < amount)
 			return Promise.reject('not enough funds on ' + cardcurrency.address + ' to top up ' + amount);
