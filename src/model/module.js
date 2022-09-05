@@ -1365,9 +1365,7 @@ var Module = class {
 		var gas = fee.gaslimit;
 		var gasPrice = fee.gasPrice;
 
-		// turn to string to avoid BigNumber error
-		var amount_string = amount.toString();
-
+		// pass string to avoid BigNumber error
 		var balance = await erc20contract.balanceOf(payingaccount);
 
 
@@ -1387,6 +1385,19 @@ var Module = class {
 
 
 		// then let creditbook do the top up
+/* 		let decimal_amount = await this._createDecimalAmount(session, amount, cardcurrency.decimals);
+
+		var top_amount_bignumber = await decimal_amount.toBigNumber();
+		var topup_amount_fixed = await decimal_amount.toString();
+
+		var topup_amount_hex = '0x' + amount.toString(16);
+		var topup_amount_dec = amount.toString();
+
+		var ethereum_node_access_instance = await _apicontrollers.getEthereumNodeAccessInstance(childsession);
+		var web3 = ethereum_node_access_instance._getWeb3Instance();
+		var wei_amount = web3.utils.toWei(topup_amount_fixed, 'ether'); */
+		var amount_string = amount.toString();
+		
 		var txhash = await creditbookobj.topupCreditBalance(amount_string, ethereumtransaction);
 
 		return txhash;

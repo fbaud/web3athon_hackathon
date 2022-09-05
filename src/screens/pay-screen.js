@@ -335,7 +335,11 @@ class PayScreen extends React.Component {
 				if (!res)
 					this.app.alert('could not add card to widget');
 
-				widget_address = await  widget_client.doChangeCurrentCard(currentcard.address);
+				//widget_address = await  widget_client.doChangeCurrentCard(currentcard.address);
+					
+				// provoke a refresh
+				await widget_client.refreshWidget();
+
 			}
 
 		}

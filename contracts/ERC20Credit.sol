@@ -7,7 +7,7 @@ import "./erc20/IERC20.sol";
 import "./erc20/extensions/IERC20Metadata.sol";
 import "./utils/Context.sol";
 
-import "../CreditBook.sol";
+import "./CreditBook.sol";
 
 contract ERC20Credit is Context, IERC20, IERC20Metadata {
     address private _creditbook;

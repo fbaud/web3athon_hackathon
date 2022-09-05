@@ -9,10 +9,13 @@ client: 0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db
 
 deploy erc20 token
 2000000000000, "USDC Coin", "USDC", 6
+2000000000000, "cUSDC", "cUSD", 18
 
 deployed at 0xd9145CCE52D386f254917e481eB44e9943F39138
 
-transfer to client 0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db, 400
+transfer to client 
+0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db, 4000000000
+0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db, 400000000000000000000
 
 
 ======================================================================================================
@@ -31,16 +34,22 @@ create credit token with token address for 0x4B20993Bc481177ec7E8f571ceCaE8A9e22
 
 
 give credit to client 1
-0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db, 400
+0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db, 4000000000
+0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db, 400000000000000000000
 
 ** Select client account
 
 use credit in credit token with as client 1
-0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2, 250 
+0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2, 2500000000
+0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2, 250000000000000000000
 
 topup as client 1
-approve contract calling ERC20Token 0xd2a5bC10698FD955D1Fe6cb468a17809A08fd005, 250
-topup calling CreditBook: 50
+approve contract calling ERC20Token 
+0xf8e81D47203A594245E36C48e151709F0C19fBe8, 2500000000
+0xf8e81D47203A594245E36C48e151709F0C19fBe8, 250000000000000000000
+topup calling CreditBook: 
+2500000000
+250000000000000000000
 
 
 
