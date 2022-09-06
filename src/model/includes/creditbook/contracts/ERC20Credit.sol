@@ -9,6 +9,7 @@ import "./utils/Context.sol";
 
 import "./CreditBook.sol";
 
+
 contract ERC20Credit is Context, IERC20, IERC20Metadata {
     address private _creditbook;
     address private _owner;
@@ -70,7 +71,13 @@ contract ERC20Credit is Context, IERC20, IERC20Metadata {
 
         CreditBook _book = CreditBook(_creditbook);
 
-        return _book.payWithCredits(_client, amount);
+        bool _done = _book.payWithCredits(_client, amount);
+
+        if (_done) {
+            emit Transfer(_client, recipient, amount);
+        }
+
+        return true;
     }
 
     // ERC20 functions not applicable

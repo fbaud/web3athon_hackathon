@@ -295,9 +295,26 @@ class PayScreen extends React.Component {
 
 	}
 
+	async reloadWidget() {
+		// rebuild widget params which will lead to a re-render
+		await this.buildWidgetParams();
+
+		// change widget key to force remount
+		let widgetkey = Date.now().toString(); 
+
+		this.setState({widgetkey});
+	}
 	
 	async onWidgetLoaded(ev) {
 		console.log('onWidgetLoaded called');
+
+		let mvcmypwa = this.getMvcMyPWAObject();
+		var mvcmycreditbook = this.getMvcMyCreditBookObject();
+
+		let rootsessionuuid = this.props.rootsessionuuid;
+		let walletuuid = this.props.currentwalletuuid;
+
+
 	
 		try {
 			let My_Widget_Client = require('@primusmoney/my_widget_react_client');
@@ -319,28 +336,27 @@ class PayScreen extends React.Component {
 	
 			const {currentcard} = this.state;
 
-			let widget_address = await  widget_client.doChangeCurrentCard(currentcard.address);
+			// check if current card is set in the widget
+			let widget_address = await widget_client.getCardAddress();
+			let are_equal = await mvcmypwa.areAddressesEqual(rootsessionuuid, currentcard.address, widget_address);
 
-			if (!widget_address) {
-				let mvcmypwa = this.getMvcMyPWAObject();
-				var mvcmycreditbook = this.getMvcMyCreditBookObject();
-		
-				let rootsessionuuid = this.props.rootsessionuuid;
-				let walletuuid = this.props.currentwalletuuid;
-		
+			if (!are_equal) {
+				// card does not exist, create it
 				const card_private_key = await mvcmypwa.getCardPrivateKey(rootsessionuuid, walletuuid, currentcard.uuid);
 
-				let res = await widget_client.doAddCard(currentcard.address, card_private_key);
+				widget_address = await widget_client.doAddCard(currentcard.address, card_private_key);
 
-				if (!res)
+				if (!widget_address)
 					this.app.alert('could not add card to widget');
 
 				//widget_address = await  widget_client.doChangeCurrentCard(currentcard.address);
-					
-				// provoke a refresh
-				await widget_client.refreshWidget();
+
+				// provoke a reload
+				await this.reloadWidget();
 
 			}
+
+
 
 		}
 		catch(e) {
@@ -355,13 +371,26 @@ class PayScreen extends React.Component {
 	}
 
 	async getBillPayConfig(currencyuuid) {
-		if (this.bill_pay_config)
-			return this.bill_pay_config;
+		let _currencyuuid = (currencyuuid ? currencyuuid : (this.currencyuuid ? this.currencyuuid : null));
+		// take currently selected currency if none passed
+
 
 		// read json config file
 		let json = await this.mvcmypwa.loadConfig('/bill-pay');
 
-		this.bill_pay_config = json.currencies[currencyuuid];
+		this.bill_pay_config = json.currencies[_currencyuuid];
+
+
+		// we fill buyer address
+		let mvcmypwa = this.getMvcMyPWAObject();
+
+		let rootsessionuuid = this.props.rootsessionuuid;
+		let walletuuid = this.props.currentwalletuuid;
+
+		let currencycard = await mvcmypwa.getCurrencyCard(rootsessionuuid, walletuuid, _currencyuuid).catch(err=>{});
+
+		if (currencycard)
+		this.bill_pay_config.widget_params.buyer_address = currencycard.address;
 
 		return this.bill_pay_config;
 	}
@@ -398,6 +427,8 @@ class PayScreen extends React.Component {
 				if (tx_hash) {
 					this.pay_tx_hash = tx_hash;
 					this.setState({instructions: 'Payment has been sent'});
+					console.log('bill transaction hash is: ' + this.bill_tx_hash);
+					console.log('payment transaction hash is: ' + tx_hash);
 	
 					// link transaction hash to bill hash
 					let web3_provider_url = this.bill_web3_provider_url;
@@ -499,14 +530,16 @@ class PayScreen extends React.Component {
 	}
 
 	renderPayForm() {
+		const {instructions, widgetkey, widget_params} = this.state;
 		return (
 			<div className="Container">
-				<div className="Instructions">{this.state.instructions}</div>
-				{(this.state.widget_params ?
+				<div className="Instructions">{instructions}</div>
+				{(widget_params ?
 				<MyWidget
+					key={widgetkey}
 					className={'MyWidgetContainer'}
 					widget_client_id={this.widget_client_id}
-					params = {this.state.widget_params}
+					params = {widget_params}
 				/>
 				: <></>
 				)}

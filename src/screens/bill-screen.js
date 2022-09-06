@@ -451,6 +451,7 @@ class BillScreen extends React.Component {
 
 			var tx_hash = await mvcmypwa.registerTransaction(rootsessionuuid, walletuuid, current_card.uuid, dataobj, assignto, _feelevel);
 			this.bill_tx_hash = tx_hash;
+			console.log('registered bill transaction under tx hash: ' + tx_hash);
 
 			// create widget to display the QR Code
 			let My_Widget_Client = require('@primusmoney/my_widget_react_client');
