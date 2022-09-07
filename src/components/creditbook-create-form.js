@@ -7,8 +7,8 @@ import PropTypes from 'prop-types';
 import { Dots } from 'react-activity';
 import 'react-activity/dist/react-activity.css';
 
-//import {CurrencyCardIcon} from '@primusmoney/react_pwa';
-import {CurrencyCardIcon} from '../nodemodules/@primusmoney/react_pwa';
+//import {CurrencyCardIcon} from '@primusmoney/react_pwa/react-js-ui';
+import {CurrencyCardIcon} from '../nodemodules/@primusmoney/react_pwa/react-js-ui';
 
 
 class CreditBookCreateForm extends React.Component {

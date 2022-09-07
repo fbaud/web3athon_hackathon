@@ -4,8 +4,8 @@ import { Button,  FormGroup, FormControl, FormLabel, InputGroup, Table} from 're
 
 import PropTypes from 'prop-types';
 
-//import {TextCopyIcon} from '@primusmoney/react_pwa';
-import {TextCopyIcon} from '../nodemodules/@primusmoney/react_pwa';
+//import {TextCopyIcon} from '@primusmoney/react_pwa/react-js-ui';
+import {TextCopyIcon} from '../nodemodules/@primusmoney/react_pwa/react-js-ui';
 
 class CreditCardView extends React.Component {
 	

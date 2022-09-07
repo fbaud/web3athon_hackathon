@@ -3,8 +3,8 @@ import { connect } from 'react-redux';
 
 import PropTypes from 'prop-types';
 
-//import {Header} from '@primusmoney/react_pwa';
-import {Header} from '../nodemodules/@primusmoney/react_pwa';
+//import {Header} from '@primusmoney/react_pwa/react-js-ui';
+import {Header} from '../nodemodules/@primusmoney/react_pwa/react-js-ui';
 
 import CreditCardView from '../components/creditcard-view.js';
 import CreditCardCreateForm from '../components/creditcard-create-form.js';

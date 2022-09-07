@@ -29,6 +29,8 @@
 			{"type":"link", "pathname": "/creditbook", "label": "Create a Credit Book"},
 			{"type":"link", "pathname": "/creditbooks", "label": "Credit Books"},
 			{"disabled": false, "type": "separator"},
+			{"type":"link", "pathname": "/creditbook_bill", "label": "Bill"},
+			{"disabled": false, "type": "separator"},
 			{"type":"link", "pathname": "/creditcard", "label": "Associate a Credit Facility"},
 			{"type":"link", "pathname": "/creditcards", "label": "Credit Cards"}
 		]

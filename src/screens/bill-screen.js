@@ -7,8 +7,8 @@ import { Button, Dropdown, DropdownButton, FormGroup, FormControl, FormLabel, In
 
 import '../css/poc.css';
 
-//import {Header} from '@primusmoney/react_pwa';
-import {Header} from '../nodemodules/@primusmoney/react_pwa';
+//import {Header} from '@primusmoney/react_pwa/react-js-ui';
+import {Header} from '../nodemodules/@primusmoney/react_pwa/react-js-ui';
 
 import CurrencyInput from 'react-currency-input-field';
 
