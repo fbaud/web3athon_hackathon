@@ -151,7 +151,7 @@ class CreditBookListView extends React.Component {
 
 	render() {
 		return (
-			<div className="Container">
+			<div className="Component">
 				<div className="Instructions">{this.state.title}</div>
 				<div className="Explanations">{this.state.instructions}</div>
 				{this.renderList()}

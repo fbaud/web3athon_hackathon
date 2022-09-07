@@ -20,3 +20,12 @@
 	width: 75pt;
 	margin: 10pt;
 }
+
+
+span.CreditCardBalanceCol {
+	width: 50vw;
+}
+
+.CreditCardBalanceLabel {
+	display: block;
+}

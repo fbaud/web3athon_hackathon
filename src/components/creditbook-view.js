@@ -202,7 +202,7 @@ class CreditBookView extends React.Component {
 	
 			// goto new account
 			let params = {action: 'view', creditbookuuid, client_address};
-			this.app.gotoRoute('creditbook', params);
+			this.app.gotoRoute('creditaccount', params);
 			
 			this._setState({processing: false});
 	
@@ -316,7 +316,7 @@ class CreditBookView extends React.Component {
 
 	render() {
 		return (
-			<div className="Container">
+			<div className="Component">
 				<div className="Title">Credit Book View</div>
 				{ this.renderForm()}
 			</div>

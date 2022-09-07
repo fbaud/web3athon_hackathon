@@ -390,7 +390,7 @@ class CreditAccountView extends React.Component {
 
 	render() {
 		return (
-			<div className="Container">
+			<div className="Component">
 				<div className="Title">Credit Account View</div>
 				{ this.renderCreditBookView()}
 				<div className="Separator">&nbsp;</div>

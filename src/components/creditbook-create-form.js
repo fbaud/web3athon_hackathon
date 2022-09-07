@@ -530,7 +530,7 @@ class CreditBookCreateForm extends React.Component {
 		}
 		
 		return (
-			<div className="Container">
+			<div className="Component">
 				<div className="Title">Create Credit Book</div>
 				{ this.renderCurrencyPickForm()}
 				{ this.renderCreditBookCreateForm()}

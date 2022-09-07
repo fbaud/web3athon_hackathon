@@ -38,7 +38,6 @@ class CreditCardView extends React.Component {
 				web3providerurl_string: 'loading...',
 				message_text: 'loading...',
 	
-				creditcard: null,
 				credit_limit_int: 0,
 				credit_limit_string: 'loading...',
 				crdit_balance_int: 0,
@@ -163,7 +162,6 @@ class CreditCardView extends React.Component {
 					client_position_int, client_position_string,
 					web3providerurl, web3providerurl_string,
 
-					creditcard: creditcard_position.creditcard,
 					credit_limit_int, credit_limit_string, 
 					credit_balance_int, credit_balance_string,
 				
@@ -298,8 +296,8 @@ class CreditCardView extends React.Component {
 		return (
 			<div className="Form">
 				<FormGroup className="CurrencyCard" controlId="balance">
-				<span>
-					<FormLabel># tx units</FormLabel>
+				<span className="CreditCardBalanceCol">
+					<FormLabel className="CreditCardBalanceLabel"># tx units</FormLabel>
 					<FormControl
 						className="CurrencyCardBalance"
 						disabled
@@ -308,8 +306,8 @@ class CreditCardView extends React.Component {
 						value={client_creditbalance}
 					/>
 				</span>
-				<span>
-					<FormLabel>Balance</FormLabel>
+				<span className="CreditCardBalanceCol">
+					<FormLabel className="CreditCardBalanceLabel">Balance</FormLabel>
 					<FormControl
 						className="CurrencyCardBalance"
 						disabled
@@ -317,8 +315,6 @@ class CreditCardView extends React.Component {
 						type="text"
 						value={client_position_string}
 					/>
-				</span>
-				<span className="CurrencyCardIconCol">
 				</span>
 
 				</FormGroup>
@@ -378,8 +374,8 @@ class CreditCardView extends React.Component {
 		return (
 			<div className="Form">
 				<FormGroup className="CurrencyCard" controlId="balance">
-					<span>
-						<FormLabel>Balance</FormLabel>
+					<span className="CreditCardBalanceCol">
+						<FormLabel className="CreditCardBalanceLabel">Balance</FormLabel>
 						<FormControl
 							className="CurrencyCardBalance"
 							disabled
@@ -388,8 +384,8 @@ class CreditCardView extends React.Component {
 							value={credit_balance_string}
 						/>
 					</span>
-					<span>
-						<FormLabel>Limit</FormLabel>
+					<span className="CreditCardBalanceCol">
+						<FormLabel className="CreditCardBalanceLabel">Limit</FormLabel>
 						<FormControl
 							className="CurrencyCardBalance"
 							disabled
@@ -455,7 +451,7 @@ class CreditCardView extends React.Component {
 
 	render() {
 		return (
-			<div className="Container">
+			<div className="Component">
 				<div className="Title">Credit Card View</div>
 				{ this.renderForm()}
 			</div>

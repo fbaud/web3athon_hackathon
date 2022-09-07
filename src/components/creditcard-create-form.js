@@ -436,7 +436,7 @@ class CreditCardCreateForm extends React.Component {
 
 	render() {
 		return (
-			<div className="Container">
+			<div className="Component">
 				<div className="Title">Associate Credit Facility</div>
 				{ this.renderCurrencyPickForm()}
 				<div className="Separator">&nbsp;</div>
