@@ -396,7 +396,7 @@ class PayScreen extends React.Component {
 	}
 
 	async widget_on_pay(ev) {	
-		console.log('WP - PayScreen.widget_on_pay called');
+		console.log('PayScreen.widget_on_pay called');
 
 		// it is our widget firing this event
 		try {
@@ -415,20 +415,24 @@ class PayScreen extends React.Component {
 	
 			if (ev.detail && ev.detail.app_uuid && ( ev.detail.app_uuid == widget_client.app_uuid)) {
 				// it is our widget firing this event
+				console.log('PayScreen.widget_on_pay treating event for ' + widget_client.app_uuid);
 
 				let data = ev.detail;
 		
 				let tx_info = data.tx_info;
 				let tx_hash = tx_info.hash;
 
-				if (this.pay_tx_hash == tx_hash)
+				if (this.pay_tx_hash == tx_hash) {
+					console.log('PayScreen.widget_on_pay already processing tx ' + tx_hash + ' for ' + widget_client.app_uuid);
+
 					return; // already processing
+				}
 	
 				if (tx_hash) {
 					this.pay_tx_hash = tx_hash;
 					this.setState({instructions: 'Payment has been sent'});
-					console.log('bill transaction hash is: ' + this.bill_tx_hash);
-					console.log('payment transaction hash is: ' + tx_hash);
+					console.log('PayScreen.widget_on_pay bill transaction hash is: ' + this.bill_tx_hash);
+					console.log('PayScreen.widget_on_pay payment transaction hash is: ' + tx_hash);
 	
 					// link transaction hash to bill hash
 					let web3_provider_url = this.bill_web3_provider_url;
@@ -470,7 +474,7 @@ class PayScreen extends React.Component {
 						this.app.error('error signaling payment: ' + err);
 					});
 	
-					console.log('linker transaction hash is: ' + result);
+					console.log('PayScreen.widget_on_pay linker transaction hash is: ' + result);
 	
 	
 					//

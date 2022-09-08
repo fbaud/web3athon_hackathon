@@ -256,7 +256,7 @@ class BillScreen extends React.Component {
 	
 	
 	async onWidgetLoaded(ev) {
-		console.log('onWidgetLoaded called');
+		console.log('BillScreen.onWidgetLoaded called');
 	
 		try {
 			let billpay_config = await this.getBillPayConfig();
@@ -290,6 +290,8 @@ class BillScreen extends React.Component {
 
 
 			// we keep asking the linker contract if a transaction hash has been linked to our bill hash
+			console.log('BillScreen.onWidgetLoaded listening to link to bill tx hash ' + this.bill_tx_hash);
+
 			let web3_provider_url = billpay_config.widget_params.web3_provider_url;
 			let linkercontractaddress = billpay_config.linker.address;
 			let tx_hash = await mvcmycreditbook.retrieveLinkerValue(rootsessionuuid, linkercontractaddress, web3_provider_url, this.bill_tx_hash);
@@ -301,7 +303,7 @@ class BillScreen extends React.Component {
 			while(!tx_hash) {
 				await this.app.sleep(lapse); // wait 2 s
 
-				// ask order
+				// ask if payment tx linked to bill tx
 				tx_hash = await mvcmycreditbook.retrieveLinkerValue(rootsessionuuid, linkercontractaddress, web3_provider_url, this.bill_tx_hash);
 
 				loop++;
@@ -310,6 +312,7 @@ class BillScreen extends React.Component {
 
 			if (tx_hash) {
 				this.setState({instructions: 'Payment has been submitted'});
+				console.log('BillScreen.onWidgetLoaded payment has been submitted with tx hash ' + tx_hash);
 
 				widget_client.setTransactionHash(tx_hash);
 

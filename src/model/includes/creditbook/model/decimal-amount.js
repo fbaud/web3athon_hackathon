@@ -144,9 +144,9 @@ var DecimalAmount = class {
 				// if necessary
 				let parts = amount.split('.');
 	
-				let integerpart = parseInt(parts[0]);
-				let decimalpart = parseInt(parts[1]);
-	
+				let integerpart = ( Number.isInteger(parseInt(parts[0])) ? parts[0] : '0');
+				let decimalpart = ( Number.isInteger(parseInt(parts[1])) ? parts[1] : '0');
+
 				_inputamountstring = integerpart + '.' + decimalpart;
 			}
 
@@ -205,8 +205,8 @@ var DecimalAmount = class {
 			// if necessary
 			let parts = amount.split('.');
 
-			let integerpart = parseInt(parts[0]);
-			let decimalpart = parseInt(parts[1]);
+			let integerpart = ( parts[0] ? parts[0] : '0');
+			let decimalpart = ( parts[1] ? parts[1] : '0');
 
 			_inputamountstring = integerpart + '.' + decimalpart;
 		}
@@ -216,17 +216,24 @@ var DecimalAmount = class {
 			// fill the decimals up to the required length
 			let parts = _inputamountstring.split('.');
 
-			let integerpart = parts[0];
+			let integerpart = (parts[0] ? parts[0] : '');
 			let decimalpart;
 
-			if (parts[1].length > decimals)
+			if (parts[1]) {
+				if (parts[1].length > decimals)
 				decimalpart = parts[1].substring(decimals); // cut
+				else {
+					decimalpart = parts[1]; // fill if necessary
+					for (var i = 0; i < (decimals -parts[1].length) ; i++) decimalpart += '0';
+				}
+
+				_outputamountstring = integerpart + '.' + decimalpart;
+			}
 			else {
-				decimalpart = parts[1]; // fill if necessary
-				for (var i = 0; i < (decimals -parts[1].length) ; i++) decimalpart += '0';
+				_outputamountstring = integerpart;
 			}
 
-			_outputamountstring = integerpart + '.' + decimalpart;
+
 		}
 			
 

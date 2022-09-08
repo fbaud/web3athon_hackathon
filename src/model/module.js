@@ -1135,8 +1135,6 @@ var Module = class {
 		if (!currency)
 			return Promise.reject('could not find currency ' + currencyuuid);
 
-		console.log('fetchCreditCardInfo step1');
-
 		//
 		// client card
 		let clientcard = await wallet.getCardFromUUID(clientcarduuid);
@@ -1161,48 +1159,33 @@ var Module = class {
 		let owner = await creditbookobj.getChainOwner();
 		let title = await creditbookobj.getChainTitle();
 
-		let credit_limit_str = await creditbookobj.creditlimitOf(client_addr);
+		// credit limit
+		let credit_limit_of = await creditbookobj.creditlimitOf(client_addr);
+		let credit_limit_str = credit_limit_of.substring(0, credit_limit_of.length - currency.decimals)
+							+ '.' + credit_limit_of.substring(credit_limit_of.length - currency.decimals, credit_limit_of.length);
 		
-		let credit_limit_int = parseInt(credit_limit_str);
+		let credit_limit_dec = await this._createDecimalAmount(session, credit_limit_str, currency.decimals);
+
+		let credit_limit_int = await credit_limit_dec.toInteger();
 		let credit_limit_string = await this._formatCurrencyIntAmount(sessionuuid, currencyuuid, credit_limit_int, options);
 		
-		let credit_limit_dec = await this._createDecimalAmount(session, credit_limit_int, currency.decimals);
-		let credit_limit_fixed_str = await credit_limit_dec.toFixedString(2);
+		// balance
+		let credit_balance_of = await creditbookobj.balanceOf(client_addr);
+		let credit_balance_str = credit_balance_of.substring(0, credit_balance_of.length  - currency.decimals)
+							+ '.' + credit_balance_of.substring(credit_balance_of.length - currency.decimals, credit_balance_of.length);
 
-		console.log('fetchCreditCardInfo step2');
+		let credit_balance_dec = await this._createDecimalAmount(session, credit_balance_str, currency.decimals);
 
-		//
-		//  credit card info
-/* 		let creditcard = await this.getCurrencyCreditCard(sessionuuid, walletuuid, clientcarduuid, credittoken_addr);
-		let creditcurrencyuuid = creditcard.currencyuuid;
-
-		// TODO: looking directly in creditbook for balance could be faster
-		let credit_balance_pos = await mvcpwa.getCurrencyPosition(sessionuuid, walletuuid, creditcurrencyuuid, creditcard.uuid);
-		
-		let credit_balance_int = await credit_balance_pos.toInteger();
-		let credit_balance_string = await mvcpwa.formatCurrencyAmount(sessionuuid, creditcurrencyuuid, credit_balance_pos);
- */
-
-		let creditcard = {};
-		let credit_balance_str = await creditbookobj.balanceOf(client_addr);
-		let credit_balance_int = parseInt(credit_balance_str);
+		let credit_balance_int = await credit_balance_dec.toInteger();
 		let credit_balance_string = await this._formatCurrencyIntAmount(sessionuuid, currencyuuid, credit_balance_int, options);
-
-		// remove commented code above
-
-		let credit_balance_dec = await this._createDecimalAmount(session, credit_balance_int, currency.decimals);
 
 
 		// maximum topup amount
 		let topup_max_dec = await credit_limit_dec.substract(credit_balance_dec);
 		let topup_max_int = await topup_max_dec.toInteger();
 
-		console.log('fetchCreditCardInfo step3');
-
 		// position
 		let creditcard_info = {};
-
-		//creditcard_info.creditcard = creditcard;
 
 		creditcard_info.limit_string = credit_limit_string;
 		creditcard_info.limit_int = credit_limit_int;
