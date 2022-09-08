@@ -202,7 +202,8 @@ class CreditBookView extends React.Component {
 	
 			// goto new account
 			let params = {action: 'view', creditbookuuid, client_address};
-			this.app.gotoRoute('creditaccount', params);
+			//this.app.gotoRoute('creditaccount', params);
+			this.app.gotoRoute('creditbooks', params);
 			
 			this._setState({processing: false});
 	

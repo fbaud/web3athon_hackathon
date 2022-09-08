@@ -1,6 +1,6 @@
 {
   "name": "my-creditbook",
-  "version": "0.40.29",
+  "version": "0.40.30",
   "private": true,
   "license": "UNLICENSED",
   "dependencies": {

@@ -3,18 +3,18 @@ import ReactDOM from 'react-dom';
 import './index.css';
 import * as serviceWorker from './serviceWorker';
 
-//import ReactPWA from '@primusmoney/react_pwa/react-js-ui';
-import ReactPWA from './nodemodules/@primusmoney/react_pwa/react-js-ui';
+import ReactPWA from '@primusmoney/react_pwa/react-js-ui';
+//import ReactPWA from './nodemodules/@primusmoney/react_pwa/react-js-ui';
 
-//import {App} from '@primusmoney/react_pwa/react-js-ui';
-import {App} from './nodemodules/@primusmoney/react_pwa/react-js-ui';
+import {App} from '@primusmoney/react_pwa/react-js-ui';
+//import {App} from './nodemodules/@primusmoney/react_pwa/react-js-ui';
 //const App = ReactPWA.getAppClass();
 
 console.log('loading index.js');
 
 // app config
 var EXEC_ENV = 'prod';
-var PWA_APP_VERSION = '0.40.29.2022.09.08';
+var PWA_APP_VERSION = '0.40.30.2022.09.08';
 
 
 App.EXEC_ENV = EXEC_ENV;
