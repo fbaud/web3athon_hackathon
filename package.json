@@ -1,6 +1,6 @@
 {
   "name": "my-creditbook",
-  "version": "0.40.30",
+  "version": "0.40.32",
   "private": true,
   "license": "UNLICENSED",
   "dependencies": {
@@ -12,7 +12,7 @@
     "@p2pmoney-org/ethereum_erc721": "0.30.10",
     "@primusmoney/react_client_wallet": "0.30.10",
     "@primusmoney/my_widget_react_client": "0.30.13",
-    "@primusmoney/react_pwa": "0.30.13",
+    "@primusmoney/react_pwa": "0.30.14",
     "@testing-library/jest-dom": "^4.2.4",
     "@testing-library/react": "^9.5.0",
     "@testing-library/user-event": "^7.2.1",
