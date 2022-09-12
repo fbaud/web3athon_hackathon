@@ -14,7 +14,7 @@ console.log('loading index.js');
 
 // app config
 var EXEC_ENV = 'prod';
-var PWA_APP_VERSION = '0.40.32.2022.09.09';
+var PWA_APP_VERSION = '0.40.33.2022.09.09';
 
 
 App.EXEC_ENV = EXEC_ENV;
